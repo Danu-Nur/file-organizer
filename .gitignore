@@ -1,0 +1,24 @@
+# Rust / Tauri build output
+/src-tauri/target/
+/src-tauri/target-*/
+/src-tauri/gen/schemas/
+/src-tauri/redist/
+
+# Models are downloaded by users, never committed
+*.gguf
+*.gguf.part
+*.safetensors
+
+# Local notes and assistant context (not part of the public project)
+/CLAUDE.md
+/RINGKASAN-PEKERJAAN.md
+/.claude/
+/notes/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

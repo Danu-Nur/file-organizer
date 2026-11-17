@@ -1,0 +1,52 @@
+[package]
+name = "file-organizer"
+version = "0.1.0"
+description = "Windows desktop app that suggests where files belong, finds duplicates and tidies folders with an undoable plan"
+authors = ["Danu-Nur and contributors"]
+license = "GPL-3.0-or-later"
+readme = "../README.md"
+keywords = ["file-organizer", "duplicates", "tauri", "windows", "local-ai"]
+categories = ["filesystem"]
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+cc = "1"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-dialog = "2"
+trash = "5"
+# Explorer interop: file lists on the Windows clipboard (CF_HDROP), native drag out of the window.
+clipboard-win = "5"
+drag = "2"
+# AI model download (pinned URL, SHA-256 checked, resumable)
+ureq = "2"
+sha2 = "0.10"
+windows-sys = { version = "0.59", features = ["Win32_UI_Shell", "Win32_Foundation", "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_Storage_FileSystem"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+notify = "8"
+md5 = "0.7"
+dirs = "6"
+
+# Local AI: llama.cpp in-process, Vulkan GPU, CPU fallback. Behind a feature so the normal
+# build needs no Vulkan SDK/LLVM. No `native` feature (it targets the build machine's CPU).
+llama-cpp-4 = { version = "=0.10.0", default-features = false, features = ["mtmd", "vulkan", "openmp"], optional = true }
+pdf-extract = { version = "0.8", optional = true }
+zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
+
+[features]
+# local-llm stays opt-in at build time (needs the Vulkan SDK); at run time AI is also off until the user enables it.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+local-llm = ["dep:llama-cpp-4", "dep:pdf-extract", "dep:zip"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

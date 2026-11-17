@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "File Organizer",
+  "version": "0.1.0",
+  "identifier": "id.fileorganizer.desktop",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "label": "main", "title": "File Organizer", "width": 1180, "height": 720, "minWidth": 760, "minHeight": 420, "center": true }
+    ],
+    "security": { "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Danu-Nur",
+    "copyright": "Copyright (C) 2026 Danu-Nur and contributors. Licensed under GPL-3.0-or-later.",
+    "category": "Utility",
+    "shortDescription": "Suggests where files belong, finds duplicates and tidies folders with an undoable plan.",
+    "longDescription": "File Organizer watches your everyday folders, suggests where new files belong, finds exact duplicates and turns a messy folder into an editable clean-up plan. Nothing moves without approval, nothing is deleted, and every run can be undone. Optional local AI runs fully offline.",
+    "license": "GPL-3.0-or-later",
+    "licenseFile": "../LICENSE",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+  }
+}

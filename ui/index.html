@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File Organizer</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="cmdbar" role="toolbar" aria-label="Perintah">
+    <div class="grp" id="filecmds">
+      <button class="btn" data-act="newFolder" title="Folder baru (Ctrl+Shift+N)"><span data-icon="folderAdd"></span><span class="lbl">Baru</span></button>
+      <span class="sep" role="separator"></span>
+      <button class="btn icon" data-act="cut" title="Potong (Ctrl+X)" aria-label="Potong"><span data-icon="cut"></span></button>
+      <button class="btn icon" data-act="copy" title="Salin (Ctrl+C)" aria-label="Salin"><span data-icon="copy"></span></button>
+      <button class="btn icon" data-act="paste" title="Tempel (Ctrl+V)" aria-label="Tempel"><span data-icon="paste"></span></button>
+      <button class="btn icon" data-act="rename" title="Ganti nama (F2)" aria-label="Ganti nama"><span data-icon="rename"></span></button>
+      <button class="btn icon" data-act="delete" title="Hapus ke Recycle Bin (Del)" aria-label="Hapus"><span data-icon="trash"></span></button>
+      <span class="sep" role="separator"></span>
+      <button class="btn primary" data-act="apply"><span data-icon="move"></span><span class="lbl">Pindah ke saran</span></button>
+      <button class="btn" data-act="dismiss"><span data-icon="hide"></span><span class="lbl">Abaikan</span></button>
+    </div>
+    <span class="grow"></span>
+    <div class="seg" id="modes" role="group" aria-label="Tampilan">
+      <button data-mode="list" title="Daftar" aria-label="Tampilan daftar"><span data-icon="listv"></span></button>
+      <button data-mode="tree" title="Tree" aria-label="Tampilan tree"><span data-icon="treev"></span></button>
+    </div>
+    <button class="btn magic" data-act="tidy" title="Buat rencana merapikan folder ini"><span data-icon="sparkle"></span><span class="lbl">Rapikan folder</span></button>
+    <label class="search" id="searchbox">
+      <span data-icon="search"></span>
+      <input id="q" type="search" placeholder="Cari" autocomplete="off" spellcheck="false" aria-label="Cari">
+      <kbd>Ctrl F</kbd>
+    </label>
+  </header>
+
+  <nav id="nav" aria-label="Navigasi"></nav>
+
+  <main>
+    <section id="explorer" class="pane">
+      <div class="page-head">
+        <div id="addr" class="addr" hidden>
+          <button class="btn icon sm" data-nav="back" title="Kembali (Alt+←)" aria-label="Kembali"><span data-icon="back"></span></button>
+          <button class="btn icon sm" data-nav="fwd" title="Maju (Alt+→)" aria-label="Maju"><span data-icon="fwd"></span></button>
+          <button class="btn icon sm" data-nav="up" title="Naik satu folder (Alt+↑)" aria-label="Naik"><span data-icon="up"></span></button>
+          <button class="btn icon sm" data-nav="refresh" title="Muat ulang (F5)" aria-label="Muat ulang"><span data-icon="refresh"></span></button>
+          <div id="crumbs" class="crumbs" title="Klik dua kali untuk mengetik path"></div>
+        </div>
+        <h1 id="title"></h1>
+        <p id="subtitle"></p>
+      </div>
+      <div id="list" class="list" tabindex="0" role="grid" aria-multiselectable="true" aria-labelledby="title">
+        <table id="grid">
+          <colgroup id="cols"></colgroup>
+          <thead><tr id="head"></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div id="empty" class="empty" hidden></div>
+      </div>
+    </section>
+    <section id="tidy" class="pane" hidden></section>
+    <section id="settings" class="pane" hidden></section>
+  </main>
+
+  <footer class="status">
+    <span id="st-items"></span>
+    <span id="st-sel"></span>
+    <span id="st-clip"></span>
+    <span class="grow"></span>
+    <span id="st-watch"></span>
+  </footer>
+
+  <div id="menu" class="flyout" role="menu" hidden></div>
+  <div id="dialog" class="backdrop" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="ghost" class="ghost" hidden></div>
+  <datalist id="targets"></datalist>
+  <script src="app.js"></script>
+</body>
+</html>
