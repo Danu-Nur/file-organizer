@@ -158,6 +158,9 @@ fn hash_into(app: &AppHandle, state: &'static str, mut reader: impl Read, hasher
             f.write_all(&buf[..n]).map_err(|e| format!("Gagal menulis file: {e}"))?;
         }
         done += n as u64;
+        if state == "download" && done > total {
+            return Err("Server mengirim data lebih besar dari ukuran model resmi; unduhan dihentikan.".into());
+        }
         if last.elapsed().as_millis() > 250 {
             emit(app, state, done, total, "");
             last = std::time::Instant::now();

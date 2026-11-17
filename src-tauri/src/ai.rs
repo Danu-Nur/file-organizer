@@ -77,18 +77,31 @@ pub fn propose_topics(model: &Path, docs: &[(String, String)], existing: &[Strin
     Ok(topics)
 }
 
+/// Files come from Downloads (untrusted): every read is bounded, so a huge or crafted file (e.g. a zip bomb) cannot
+/// exhaust memory. Only the opening text is needed anyway.
+const MAX_PDF_BYTES: u64 = 50 << 20;
+const MAX_DOCX_XML_BYTES: u64 = 512 << 10;
+const MAX_TEXT_BYTES: u64 = 8000;
+
 /// First ~2000 characters of a PDF / DOCX / text file.
 pub fn read_text(p: &Path) -> Option<String> {
+    use std::io::Read;
     let ext = p.extension()?.to_str()?.to_lowercase();
     let text = match ext.as_str() {
         "pdf" => {
+            // pdf_extract parses the whole file; very large PDFs are judged by name only.
+            if p.metadata().ok()?.len() > MAX_PDF_BYTES {
+                return None;
+            }
             let p = p.to_path_buf();
             std::panic::catch_unwind(move || pdf_extract::extract_text(&p)).ok()?.ok()?
         }
         "docx" => {
             let mut z = zip::ZipArchive::new(std::fs::File::open(p).ok()?).ok()?;
-            let mut xml = String::new();
-            std::io::Read::read_to_string(&mut z.by_name("word/document.xml").ok()?, &mut xml).ok()?;
+            let entry = z.by_name("word/document.xml").ok()?;
+            let mut raw = Vec::new();
+            entry.take(MAX_DOCX_XML_BYTES).read_to_end(&mut raw).ok()?; // cap the decompressed size
+            let xml = String::from_utf8_lossy(&raw);
             let mut out = String::new();
             let mut in_tag = false;
             for c in xml.chars() {
@@ -102,8 +115,9 @@ pub fn read_text(p: &Path) -> Option<String> {
             out
         }
         "txt" | "md" | "rtf" => {
-            let b = std::fs::read(p).ok()?;
-            String::from_utf8_lossy(&b[..b.len().min(8000)]).into_owned()
+            let mut b = Vec::new();
+            std::fs::File::open(p).ok()?.take(MAX_TEXT_BYTES).read_to_end(&mut b).ok()?;
+            String::from_utf8_lossy(&b).into_owned()
         }
         _ => return None,
     };
