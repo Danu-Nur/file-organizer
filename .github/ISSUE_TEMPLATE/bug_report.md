@@ -4,6 +4,8 @@ about: Something does not work as expected
 labels: bug
 ---
 
+<!-- English or Bahasa Indonesia are both fine. Bahasa Indonesia juga boleh. -->
+
 **What happened**
 
 **What you expected**

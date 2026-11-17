@@ -1,5 +1,7 @@
 # Contributing
 
+**English** · [Bahasa Indonesia](CONTRIBUTING.id.md)
+
 Thanks for helping! Bug reports, ideas and pull requests are welcome.
 
 ## Getting started
@@ -25,17 +27,18 @@ $env:CARGO_BUILD_JOBS = '4'          # optional: keep the machine responsive
 cargo build --features local-llm --target-dir target-ai
 ```
 
-The first build takes several minutes. Do not use llama.cpp's `native` CPU feature: binaries would only run on CPUs
-like the build machine's.
+The first build takes several minutes. Do not enable llama.cpp's `native` CPU feature: the binary would only run on
+CPUs like the build machine's.
 
 ## Ground rules for changes
 
 - **Never lose a user's file.** Moves go through `ops::Log` (undoable, never overwrite). Deletion only via the
-  Recycle Bin and only on an explicit user action.
+  Recycle Bin, and only on an explicit user action; permanent deletion always asks first.
 - **Suggest, don't act.** Nothing moves without a click.
 - **No file content is stored or sent anywhere.** The index keeps name, path, size, date and MD5.
 - **AI stays optional.** Every feature must work without it; the model is never downloaded or loaded unless the
   user asked.
+- **Untrusted files, bounded reads.** Anything read for previews or AI is size-capped.
 - Keep the UI consistent with the existing Windows 11 style (tokens in `ui/app.css`), keyboard-accessible, and in
   Indonesian.
 - Keep dependencies minimal; prefer the standard library and what is already in `Cargo.toml`.
@@ -46,21 +49,31 @@ like the build machine's.
 
 - `rules` — categories, ignored files, version names
 - `plan` — analyse → execute → undo on a throwaway folder (the layout must be restored exactly)
+- `preview` — bounded reads
 - `sysinfo` — hardware advice levels
+- path prefixes for drive roots, calendar years
 
 Add a test for any new logic that moves files or decides where they go.
 
-### Driving the UI in debug builds
+## Developer switches
 
-Debug builds evaluate a script from `FO_DEBUG_SCRIPT` a few seconds after start, which is handy for screenshots and
-manual checks without clicking:
+| Variable | Effect |
+|---|---|
+| `FO_DATA_DIR` | Use another folder for the index and settings (demo data, tests, portable use). |
+| `FO_ROOTS` | Watch exactly these folders (`;`-separated) from the first scan on, ignoring the saved list. |
+| `FO_DEBUG_SCRIPT` | Debug builds only: evaluate this JavaScript file in the page ~3 s after start. |
+
+### Demo data and screenshots
 
 ```powershell
-$env:FO_DEBUG_SCRIPT = "C:\path\to\tour.js"   # e.g. go(S.roots[1].path); S.mode = 'tree'; load();
-cargo run
+.\scripts\demo-data.ps1                  # messy sample folder with made-up files (in %TEMP%)
+cd src-tauri; cargo build; cd ..
+.\scripts\screenshots.ps1                # regenerates docs/screenshots/*.png
 ```
 
-Never let such a script apply a plan or delete anything on a real folder.
+`screenshots.ps1` starts the debug build with `FO_DATA_DIR` (throwaway index), `FO_ROOTS` (only the demo folders)
+and `FO_DEBUG_SCRIPT` (`scripts/screenshot-tour.js`), then captures the window with `PrintWindow`, so it works
+even when other windows cover it. Never take screenshots from real personal folders.
 
 ## Pull requests
 

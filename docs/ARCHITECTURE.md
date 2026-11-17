@@ -6,7 +6,9 @@ ui/                      plain HTML/CSS/JS, loaded by Tauri (no bundler)
   app.css                Windows 11 style tokens (light/dark)
   app.js                 state, rendering, keyboard/mouse, Tidy wizard, Settings
 src-tauri/
-  src/main.rs            app setup, background indexer + file watcher, Tauri commands
+  src/main.rs            app setup, watched folders, background indexer + file watcher + drive watcher, Tauri
+                         commands (lists, browsing, dashboard, Recycle Bin, clipboard, drag-out, properties)
+  src/preview.rs         preview pane: size-capped bytes for images/PDF/media, text excerpts, DOCX text
   src/rules.rs           pure rules: category of a name, ignored files/folders, version names
   src/plan.rs            "Rapikan folder": analyse ticked folders → plan items; execute a plan
   src/ops.rs             file operations: move without overwrite, merge, undo log, rename, Recycle Bin, paste
@@ -66,6 +68,12 @@ With AI on, a document suggested for `Dokumen` may get a topic subfolder that al
 
 `plan::execute` runs deepest folders first (a ticked subfolder is tidied before it may move itself), renames before
 files before folders, through one `ops::Log` batch. `ops::undo` replays the batch backwards.
+
+## Dashboard
+
+`dashboard` reads the index once (no disk access): totals, buckets by category / extension / watched folder / year
+modified, the largest files and the duplicate groups that waste the most space. The drill-down pages are ordinary
+list views (`cat:<category>`, `ext:<extension>`, `year:<yyyy>`) filtered per row with the same rules.
 
 ## UI
 

@@ -1,81 +1,101 @@
+<div align="center">
+
 # File Organizer
 
-**A Windows desktop app that keeps your everyday folders tidy — and never moves a file without asking.**
+**A Windows desktop app that keeps your folders tidy — and never moves a file without asking.**
 
-File Organizer watches the folders you choose (by default Desktop, Downloads, Documents, Pictures, Music and Videos;
-add any folder, your user folder, OneDrive or whole drives), suggests where new files belong,
-finds exact duplicates, and turns a messy folder into an editable clean-up plan. Nothing is moved until you approve
-it, nothing is deleted, and every run can be undone.
+**English** · [Bahasa Indonesia](README.id.md)
 
-Built with [Tauri 2](https://tauri.app) (Rust) and a dependency-free HTML/JS interface that follows the Windows 11
-look in light and dark mode. The interface is in Indonesian (Bahasa Indonesia).
+![Dashboard](docs/screenshots/dashboard.png)
 
-> Screenshots: see [`docs/screenshots/`](docs/screenshots/) (add your own from a sample folder).
+</div>
+
+File Organizer watches the folders you choose, suggests where new files belong, finds exact duplicates, shows where
+your disk space goes, and turns a messy folder into an editable clean-up plan. Nothing moves until you approve it,
+nothing is deleted behind your back, and every run can be undone.
+
+Built with [Tauri 2](https://tauri.app) and Rust, with a dependency-free HTML/CSS/JS interface that follows the
+Windows 11 look in light and dark mode. The interface is in Indonesian (Bahasa Indonesia).
+
+## Highlights
+
+- **Suggest, never surprise** — every move needs a click; nothing is overwritten; every batch can be undone.
+- **Duplicates by content** — MD5 of every file, not just matching names.
+- **Tidy a whole folder** — an editable plan with a live preview, applied as one undoable batch.
+- **Explorer-like browsing** — list or tree, preview pane, cut/copy/paste with File Explorer, drag & drop,
+  Recycle Bin, hidden items, folder sizes.
+- **Dashboard** — where the space goes, by type, extension, folder and age, with drill-down lists.
+- **Optional offline AI** — off by default; a hardware check tells you whether it is worth enabling.
+
+## Screenshots
+
+| Suggestions | Browsing with preview |
+|---|---|
+| ![Suggestions](docs/screenshots/saran.png) | ![Browsing with preview](docs/screenshots/jelajah-pratinjau.png) |
+| **Tidy plan** | **Settings: optional AI** |
+| ![Tidy plan](docs/screenshots/rencana.png) | ![Settings](docs/screenshots/pengaturan.png) |
+
+All screenshots are taken from generated demo data (see [Screenshots](#screenshots-and-demo-data)).
 
 ## Features
 
-**Suggestions**
-- New loose files in the six folders get a suggested destination by type (Dokumen, Gambar, Spreadsheet, Arsip,
-  Program, Kode, Musik, Video, …).
-- Secret-looking names (recovery codes, keys, `.env`, passwords) are routed to `_Sensitif`.
-- A file whose content already exists elsewhere is routed to `_Duplikat`.
-- One click to move, or dismiss. A Windows notification announces new suggestions.
+### Suggestions (Saran)
+New loose files in the watched folders get a destination by type (Dokumen, Gambar, Spreadsheet, Arsip, Program,
+Kode, Musik, Video, …). Secret-looking names (recovery codes, keys, `.env`, passwords) go to `_Sensitif`, and a file
+whose content already exists elsewhere goes to `_Duplikat`. A Windows notification announces new suggestions.
 
-**Dashboard**
-- Headline figures: indexed size and files, space wasted by duplicates, pending suggestions, files untouched for a year.
-- File types, watched folders, extensions and file age (size per year modified), each as a chart (size and share)
-  or a sortable table. Click a bar or row to open a temporary list of those files (all `.exe`, all videos, files
-  from 2021, …) with every list feature: sorting, tree view, preview, actions.
-- Largest files, duplicate groups that waste the most space, and a "can be cleaned up" list with one-click actions.
+### Watched folders
+Start with Desktop, Downloads, Documents, Pictures, Music and Videos, then add your user folder, OneDrive, whole
+drives or any folder with **+**. Plugged-in drives are detected and can be added in one click; an unplugged drive
+keeps its index and refreshes when it comes back. System folders and hidden items are skipped.
 
-**Duplicates and index**
-- Exact duplicates by MD5, grouped by content.
-- The index holds name, path, size, date and MD5 only — file contents are never stored.
+### Browsing
+Address bar with back/forward/up, list and tree views, sortable and resizable columns, background folder sizes
+(sorting by size ranks folders by their real total), search by name or MD5, and a resizable preview pane for images,
+PDF, audio, video, text, code and DOCX.
 
-**Watched folders**
-- The navigation pane lists the watched folders; the + button adds user folders, the user folder, OneDrive, any
-  drive or any other folder. Reorder or remove from the context menu (files are never touched).
-- External drives are detected when plugged in and can be added with one click. A listed drive that is unplugged is
-  shown as not connected, keeps its index, and is re-watched and refreshed when it comes back.
-- System folders (Windows, Program Files, AppData) and hidden items are skipped when a whole drive is watched.
+### File actions
+Open, rename, new folder (opens in rename mode), delete to the Recycle Bin (undoable), cut/copy/paste through the
+Windows clipboard, drag & drop inside the app, from the desktop and out to other apps, properties, and a Recycle Bin
+view to restore or permanently delete.
 
-**Folder browsing**
-- Address bar with back / forward / up, list and tree views, sortable and resizable columns, search by name or MD5.
-- Folder sizes are computed in the background; sorting by size ranks folders by their real total, and the status
-  bar shows the total of the open folder.
-- Preview pane (Alt+P, resizable, closable): images, PDF, audio, video, text and code files, DOCX text, folder
-  contents, plus details (type, size, date, location, MD5) and the suggested destination.
-- View menu with check options: preview pane, hidden items (Ctrl+H; shown dimmed, protected OS files stay hidden).
-- Recycle Bin in the navigation pane: see what was deleted and from where, restore to the original location, delete
-  permanently or empty it (always confirmed). Delete can be undone with Ctrl+Z.
-- Open, rename (F2), delete to the Recycle Bin (Del), new folder (Ctrl+Shift+N, opens straight in rename mode),
-  properties (Alt+Enter).
-- Cut / copy / paste through the Windows clipboard, so files can be pasted to and from other windows.
-- Drag & drop inside the app, from the desktop into the app, and out of the app.
-- Undo the last move with Ctrl+Z.
+### Tidy a folder (Rapikan folder)
+1. Tick the folders whose content should be tidied (unticked subfolders keep their content).
+2. Review the plan: files by type, code projects → `Proyek`, app folders → `Program`, folders that are mostly one type,
+   duplicates → `_Duplikat`, empty items → `_Kosong`, secrets → `_Sensitif`, suspicious PHP → `_Karantina`, older
+   versions → `_Versi Lama` (unticked by default), English category folders → Indonesian names.
+3. Edit anything: tick/untick, type a destination (`Dokumen\Pajak`), bulk-change rows, rename a destination for all
+   rows. The preview updates live.
+4. Apply — nothing is deleted or overwritten, and the whole run can be undone.
 
-**Tidy a folder**
-1. Tick which folders should be tidied (unticked subfolders keep their content).
-2. Review the plan: files by type, code projects → `Proyek`, app folders → `Program`, folders that are mostly one
-   type, duplicates → `_Duplikat`, empty files/folders → `_Kosong`, secrets → `_Sensitif`, suspicious PHP →
-   `_Karantina`, older versions (`report (1).md` with different content) → `_Versi Lama` (unticked by default), and
-   English category folder names → Indonesian (merged).
-3. Edit anything: tick/untick, type another destination (`Dokumen\Pajak`), bulk-change selected rows, rename a
-   destination for all rows at once. A live preview shows the result.
-4. Apply. Nothing is deleted or overwritten; the whole run can be undone.
+### Dashboard
+Indexed size, space wasted by duplicates, pending suggestions and files untouched for a year; file types, folders,
+extensions and file age as a chart (size and share) or a sortable table. Click any bar or row to list those files
+(every `.exe`, all videos, files from 2021, …). Plus the largest files, the most wasteful duplicates and one-click
+clean-up suggestions.
 
-**Optional local AI** (off by default)
-- Suggests topic subfolders for documents, in the suggestions list and in the tidy plan.
-- Runs fully on your computer with llama.cpp (GPU via Vulkan, CPU fallback). Document text is read in memory only.
-- The settings page checks this computer (RAM, GPU/VRAM, CPU load, free disk), compares it with the requirements and
-  gives advice. Downloading the model (≈1.2 GB, pinned revision, SHA-256 verified, resumable) is always the user's
-  choice. The model refuses to load when less than 2 GB of RAM is available.
+### Optional local AI
+Suggests topic subfolders for documents. It runs entirely on your computer (llama.cpp; GPU via Vulkan with CPU
+fallback); document text is read in memory only. The settings page compares this computer (RAM, GPU/VRAM, CPU load,
+free disk) with the requirements and gives advice; downloading the model (≈1.2 GB, pinned revision, SHA-256 verified,
+resumable) is always your choice.
 
-## Safety rules
+## Keyboard shortcuts
+
+| Keys | Action | Keys | Action |
+|---|---|---|---|
+| Enter / double-click | Open | Ctrl+X / C / V | Cut / copy / paste |
+| F2 | Rename | Ctrl+Z | Undo last move or delete |
+| Del | Delete to Recycle Bin | Ctrl+Shift+N | New folder |
+| Alt+Enter | Properties | Ctrl+Shift+C | Copy path |
+| Alt+P | Preview pane | Ctrl+H | Show hidden items |
+| Alt+← / → / ↑ | Back / forward / up | Ctrl+F, F5 | Search, refresh |
+
+## Safety
 
 - Suggestions only; every move needs a click.
 - Never overwrites: a taken name becomes `name (1).ext`.
-- Never deletes, except an explicit Delete, which goes to the Recycle Bin.
+- Deletes only on an explicit Delete, to the Recycle Bin (undoable); permanent deletion always asks first.
 - Every batch of moves is logged and can be undone.
 - Hidden/system files, code projects and dependency folders (`node_modules`, `target`, …) are left alone.
 
@@ -86,16 +106,16 @@ look in light and dark mode. The interface is in Indonesian (Bahasa Indonesia).
 | OS | Windows 10/11 x64 | Windows 11 |
 | Without AI | any machine that runs Windows 10/11 | — |
 | AI: RAM | 8 GB | 16 GB |
-| AI: GPU | not required (CPU, slow) | Vulkan GPU with ≥ 3 GB VRAM |
+| AI: GPU | not required (runs on CPU, slowly) | Vulkan GPU with ≥ 3 GB VRAM |
 | AI: disk | 2 GB free | 5 GB free |
 
 ## Build from source
 
-Prerequisites: Rust (stable), WebView2 runtime (included in Windows 11), Visual Studio Build Tools (C++).
+Prerequisites: Rust (stable), Visual Studio Build Tools (C++), WebView2 runtime (included in Windows 11).
 
 ```powershell
 cd src-tauri
-cargo test              # self-checks: rules, plan → execute → undo, hardware advice
+cargo test              # self-checks
 cargo run               # development build (without the AI engine)
 cargo build --release   # src-tauri\target\release\file-organizer.exe
 ```
@@ -108,32 +128,39 @@ $env:LIBCLANG_PATH = 'C:\Program Files\LLVM\bin'
 cargo build --release --features local-llm
 ```
 
-An installer can be produced with the Tauri CLI: `cargo install tauri-cli --version "^2"` then `cargo tauri build`
-(add `--features local-llm` for the AI engine).
+Installer: `cargo install tauri-cli --version "^2"`, then `cargo tauri build` (add `--features local-llm` for AI).
+The model is never part of the build or the repository.
 
-The model is not part of the build or the repository; users download it (or pick an existing copy) in the app.
+## Screenshots and demo data
 
-## Data and privacy
+`scripts/demo-data.ps1` creates a messy sample folder with made-up files; `scripts/screenshots.ps1` runs a debug
+build on that data only (separate index, fixed watched folders) and regenerates `docs/screenshots/`. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-See [PRIVACY.md](PRIVACY.md). In short: everything stays on your computer in
-`%LOCALAPPDATA%\file-organizer\`. The only network request is the model download, and only when you start it.
+## Project structure
+
+```
+ui/            interface (index.html, app.css, app.js) — no bundler
+src-tauri/     Rust backend: indexer, rules, plans, file operations, preview, dashboard, optional AI
+scripts/       demo data and screenshot generation
+docs/          architecture notes and screenshots
+```
+
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Documentation
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the app is put together
 - [CONTRIBUTING.md](CONTRIBUTING.md) — building, testing, pull requests
-- [CHANGELOG.md](CHANGELOG.md) — release notes
+- [PRIVACY.md](PRIVACY.md) — what is stored, read and sent (in short: nothing leaves your computer)
 - [SECURITY.md](SECURITY.md) — reporting vulnerabilities
-
-## Model
-
-Text model: Qwen3.5-2B, GGUF Q4_K_M, downloaded from Hugging Face at a pinned revision and verified by SHA-256 before
-use. The model has its own license; check it before redistributing the model file.
+- [CHANGELOG.md](CHANGELOG.md) — release notes
 
 ## License
 
-Copyright (C) 2026 Danu-Nur and contributors.
+Copyright © 2026 Danu-Nur and contributors.
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY. See [LICENSE](LICENSE).
+File Organizer is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License v3.0 or later](LICENSE). It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY.
+
+The optional text model (Qwen3.5-2B, GGUF) is downloaded by the user from Hugging Face and has its own license.

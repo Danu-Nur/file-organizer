@@ -90,11 +90,10 @@ fn known_places() -> Vec<Root> {
 }
 
 fn make_root(p: PathBuf, places: &[Root]) -> Root {
-    places.iter().find(|r| same_path(&r.path, &p)).cloned().unwrap_or_else(|| Root {
-        name: p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.to_string_lossy().into_owned()),
-        path: p,
-        home: None,
-        kind: "Folder",
+    places.iter().find(|r| same_path(&r.path, &p)).cloned().unwrap_or_else(|| {
+        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.to_string_lossy().into_owned());
+        // A watched folder named like a category ("Gambar", "Documents", …) is home for that kind of file.
+        Root { home: rules::folder_category(&name), name, path: p, kind: "Folder" }
     })
 }
 
@@ -108,6 +107,11 @@ struct SavedRoot {
 /// the list (shown as not connected) with the name it had.
 fn load_roots(db: &Db) -> Vec<Root> {
     let places = known_places();
+    // FO_ROOTS="C:\a;D:\b": fixed watched folders from the very first scan (demo data, screenshots, tests), so
+    // nothing outside them is ever indexed in that session.
+    if let Some(list) = std::env::var_os("FO_ROOTS") {
+        return std::env::split_paths(&list).filter(|p| p.is_dir()).map(|p| make_root(p, &places)).collect();
+    }
     match models::setting(db, "roots").and_then(|s| serde_json::from_str::<Vec<SavedRoot>>(&s).ok()) {
         Some(list) => list.into_iter().map(|s| {
             let p = PathBuf::from(&s.path);
@@ -168,7 +172,9 @@ fn drive_watch(app: AppHandle) {
 }
 
 fn open_db() -> Connection {
-    let dir = dirs::data_local_dir().expect("LocalAppData").join("file-organizer");
+    // FO_DATA_DIR: a separate index/settings folder (demo data for screenshots, tests, portable use).
+    let dir = std::env::var_os("FO_DATA_DIR").map(PathBuf::from)
+        .unwrap_or_else(|| dirs::data_local_dir().expect("LocalAppData").join("file-organizer"));
     std::fs::create_dir_all(&dir).ok();
     let c = Connection::open(dir.join("index.db")).expect("open index.db");
     c.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;").ok();
@@ -217,6 +223,18 @@ struct Indexer {
 impl Indexer {
     fn new(st: &AppState, app: &AppHandle, gen: i64) -> Self {
         Indexer { db: st.db.clone(), roots: st.roots.clone(), app: app.clone(), gen, skip_cache: HashMap::new(), scanning: st.scanning.clone() }
+    }
+
+    /// "C:\Users\x\Downloads\a\b.pdf" → "Downloads › a › b.pdf" (shorter, and no account name on screen).
+    fn display_path(&self, p: &Path) -> String {
+        let roots = self.roots.read().unwrap();
+        match roots.iter().find(|r| p.starts_with(&r.path)) {
+            Some(r) => std::iter::once(r.name.clone())
+                .chain(p.strip_prefix(&r.path).unwrap_or(p).components().map(|c| c.as_os_str().to_string_lossy().into_owned()))
+                .collect::<Vec<_>>()
+                .join(" › "),
+            None => p.to_string_lossy().into_owned(),
+        }
     }
 
     fn root_of(&self, p: &Path) -> Option<(PathBuf, Option<&'static str>)> {
@@ -321,7 +339,7 @@ impl Indexer {
                 .unwrap_or(None);
             if let Some(d) = dup {
                 suggest = Some("_Duplikat".into());
-                reason = Some(format!("Isi sama persis dengan {d}"));
+                reason = Some(format!("Isi sama persis dengan {}", self.display_path(Path::new(&d))));
             } else if let Some(c) = rules::suggest(&name, home) {
                 suggest = Some(c.into());
                 reason = Some(if c == "_Sensitive" { "nama mengandung data rahasia" } else { "jenis file" }.into());

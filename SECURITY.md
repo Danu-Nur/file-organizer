@@ -1,5 +1,7 @@
 # Security policy
 
+**English** · [Bahasa Indonesia](SECURITY.id.md)
+
 ## Supported versions
 
 Only the latest release receives fixes.
@@ -17,5 +19,6 @@ released together with a public advisory once users can update.
 
 - The app runs locally and moves files only after user approval. Issues where a crafted file name or folder layout
   makes the app move, overwrite or delete something the user did not approve are in scope and high priority.
+- Previews and AI read untrusted files; a way to exhaust memory or run code through a crafted file is in scope.
 - The model download is pinned to one revision and verified by SHA-256; a way around that check is in scope.
 - The `_Karantina` detection of suspicious PHP is a convenience heuristic, not an antivirus.

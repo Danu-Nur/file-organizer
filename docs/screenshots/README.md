@@ -1,7 +1,20 @@
 # Screenshots
 
-Add screenshots here and reference them from the main README. Take them from a sample folder with made-up file
-names, never from a real personal folder.
+Generated from demo data with made-up file names — never from real personal folders.
 
-Suggested set: `saran.png` (suggestions), `jelajah-tree.png` (tree view), `rencana.png` (tidy plan),
-`pengaturan.png` (settings / AI advice).
+| File | Shows |
+|---|---|
+| `dashboard.png` | Dashboard: headline figures, file types, watched folders |
+| `saran.png` | Suggestions with the preview pane |
+| `jelajah-pratinjau.png` | Browsing a folder with an image preview |
+| `rencana.png` | A "Rapikan folder" plan before applying |
+| `pengaturan.png` | Settings: optional local AI with the hardware check |
+
+Regenerate (from the repo root):
+
+```powershell
+cd src-tauri; cargo build; cd ..
+.\scripts\screenshots.ps1        # add -Exe <path> to use another debug build, e.g. one with the AI engine
+```
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md#demo-data-and-screenshots) for how it works.
