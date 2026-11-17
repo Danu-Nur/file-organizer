@@ -21,11 +21,19 @@
       <button class="btn primary" data-act="apply"><span data-icon="move"></span><span class="lbl">Pindah ke saran</span></button>
       <button class="btn" data-act="dismiss"><span data-icon="hide"></span><span class="lbl">Abaikan</span></button>
     </div>
+    <div class="grp" id="bincmds" hidden>
+      <button class="btn primary" data-act="binRestore"><span data-icon="restore"></span><span class="lbl">Pulihkan</span></button>
+      <button class="btn" data-act="binPurge"><span data-icon="trash"></span><span class="lbl">Hapus permanen</span></button>
+      <span class="sep" role="separator"></span>
+      <button class="btn" data-act="binEmpty"><span data-icon="trash"></span><span class="lbl">Kosongkan Recycle Bin</span></button>
+    </div>
     <span class="grow"></span>
     <div class="seg" id="modes" role="group" aria-label="Tampilan">
       <button data-mode="list" title="Daftar" aria-label="Tampilan daftar"><span data-icon="listv"></span></button>
       <button data-mode="tree" title="Tree" aria-label="Tampilan tree"><span data-icon="treev"></span></button>
     </div>
+    <button class="btn icon" id="pvbtn" data-act="preview" title="Panel pratinjau (Alt+P)" aria-label="Panel pratinjau" aria-pressed="false"><span data-icon="panel"></span></button>
+    <button class="btn" id="viewbtn" data-act="viewMenu" title="Pilihan tampilan" aria-haspopup="menu"><span data-icon="eye"></span><span class="lbl">Lihat</span><span data-icon="chevDown"></span></button>
     <button class="btn magic" data-act="tidy" title="Buat rencana merapikan folder ini"><span data-icon="sparkle"></span><span class="lbl">Rapikan folder</span></button>
     <label class="search" id="searchbox">
       <span data-icon="search"></span>
@@ -49,17 +57,26 @@
         <h1 id="title"></h1>
         <p id="subtitle"></p>
       </div>
-      <div id="list" class="list" tabindex="0" role="grid" aria-multiselectable="true" aria-labelledby="title">
-        <table id="grid">
-          <colgroup id="cols"></colgroup>
-          <thead><tr id="head"></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-        <div id="empty" class="empty" hidden></div>
+      <div class="browse-row">
+        <div id="list" class="list" tabindex="0" role="grid" aria-multiselectable="true" aria-labelledby="title">
+          <table id="grid">
+            <colgroup id="cols"></colgroup>
+            <thead><tr id="head"></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <div id="empty" class="empty" hidden></div>
+        </div>
+        <div id="pvgrip" class="pv-grip" title="Seret untuk mengubah lebar panel" hidden></div>
+        <aside id="preview" class="preview-pane" aria-label="Pratinjau" hidden>
+          <div class="pv-head"><span>Pratinjau</span>
+            <button class="btn icon sm" data-pv="close" title="Tutup panel pratinjau (Alt+P)" aria-label="Tutup panel pratinjau"><span data-icon="close"></span></button></div>
+          <div id="pv-content" class="pv-content" aria-live="polite"></div>
+        </aside>
       </div>
     </section>
     <section id="tidy" class="pane" hidden></section>
     <section id="settings" class="pane" hidden></section>
+    <section id="dashboard" class="pane" hidden></section>
   </main>
 
   <footer class="status">
@@ -74,6 +91,7 @@
   <div id="dialog" class="backdrop" hidden></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="ghost" class="ghost" hidden></div>
+  <div id="tip" class="viz-tip" role="tooltip" hidden></div>
   <datalist id="targets"></datalist>
   <script src="app.js"></script>
 </body>

@@ -85,7 +85,6 @@ const MAX_TEXT_BYTES: u64 = 8000;
 
 /// First ~2000 characters of a PDF / DOCX / text file.
 pub fn read_text(p: &Path) -> Option<String> {
-    use std::io::Read;
     let ext = p.extension()?.to_str()?.to_lowercase();
     let text = match ext.as_str() {
         "pdf" => {
@@ -96,29 +95,8 @@ pub fn read_text(p: &Path) -> Option<String> {
             let p = p.to_path_buf();
             std::panic::catch_unwind(move || pdf_extract::extract_text(&p)).ok()?.ok()?
         }
-        "docx" => {
-            let mut z = zip::ZipArchive::new(std::fs::File::open(p).ok()?).ok()?;
-            let entry = z.by_name("word/document.xml").ok()?;
-            let mut raw = Vec::new();
-            entry.take(MAX_DOCX_XML_BYTES).read_to_end(&mut raw).ok()?; // cap the decompressed size
-            let xml = String::from_utf8_lossy(&raw);
-            let mut out = String::new();
-            let mut in_tag = false;
-            for c in xml.chars() {
-                match c {
-                    '<' => { in_tag = true; out.push(' '); }
-                    '>' => in_tag = false,
-                    _ if !in_tag => out.push(c),
-                    _ => {}
-                }
-            }
-            out
-        }
-        "txt" | "md" | "rtf" => {
-            let mut b = Vec::new();
-            std::fs::File::open(p).ok()?.take(MAX_TEXT_BYTES).read_to_end(&mut b).ok()?;
-            String::from_utf8_lossy(&b).into_owned()
-        }
+        "docx" => crate::preview::docx_text(p, MAX_DOCX_XML_BYTES)?, // caps the decompressed size
+        "txt" | "md" | "rtf" => crate::preview::head_text(p, MAX_TEXT_BYTES)?,
         _ => return None,
     };
     let t: String = text.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(2000).collect();

@@ -2,7 +2,8 @@
 
 **A Windows desktop app that keeps your everyday folders tidy — and never moves a file without asking.**
 
-File Organizer watches Desktop, Downloads, Documents, Pictures, Music and Videos, suggests where new files belong,
+File Organizer watches the folders you choose (by default Desktop, Downloads, Documents, Pictures, Music and Videos;
+add any folder, your user folder, OneDrive or whole drives), suggests where new files belong,
 finds exact duplicates, and turns a messy folder into an editable clean-up plan. Nothing is moved until you approve
 it, nothing is deleted, and every run can be undone.
 
@@ -20,14 +21,35 @@ look in light and dark mode. The interface is in Indonesian (Bahasa Indonesia).
 - A file whose content already exists elsewhere is routed to `_Duplikat`.
 - One click to move, or dismiss. A Windows notification announces new suggestions.
 
+**Dashboard**
+- Headline figures: indexed size and files, space wasted by duplicates, pending suggestions, files untouched for a year.
+- File types, watched folders, extensions and file age (size per year modified), each as a chart (size and share)
+  or a sortable table. Click a bar or row to open a temporary list of those files (all `.exe`, all videos, files
+  from 2021, …) with every list feature: sorting, tree view, preview, actions.
+- Largest files, duplicate groups that waste the most space, and a "can be cleaned up" list with one-click actions.
+
 **Duplicates and index**
 - Exact duplicates by MD5, grouped by content.
 - The index holds name, path, size, date and MD5 only — file contents are never stored.
 
+**Watched folders**
+- The navigation pane lists the watched folders; the + button adds user folders, the user folder, OneDrive, any
+  drive or any other folder. Reorder or remove from the context menu (files are never touched).
+- External drives are detected when plugged in and can be added with one click. A listed drive that is unplugged is
+  shown as not connected, keeps its index, and is re-watched and refreshed when it comes back.
+- System folders (Windows, Program Files, AppData) and hidden items are skipped when a whole drive is watched.
+
 **Folder browsing**
-- Address bar with back / forward / up, list and tree views, sortable and resizable columns, background folder sizes,
-  search by name or MD5.
-- Open, rename (F2), delete to the Recycle Bin (Del), new folder (Ctrl+Shift+N), properties (Alt+Enter).
+- Address bar with back / forward / up, list and tree views, sortable and resizable columns, search by name or MD5.
+- Folder sizes are computed in the background; sorting by size ranks folders by their real total, and the status
+  bar shows the total of the open folder.
+- Preview pane (Alt+P, resizable, closable): images, PDF, audio, video, text and code files, DOCX text, folder
+  contents, plus details (type, size, date, location, MD5) and the suggested destination.
+- View menu with check options: preview pane, hidden items (Ctrl+H; shown dimmed, protected OS files stay hidden).
+- Recycle Bin in the navigation pane: see what was deleted and from where, restore to the original location, delete
+  permanently or empty it (always confirmed). Delete can be undone with Ctrl+Z.
+- Open, rename (F2), delete to the Recycle Bin (Del), new folder (Ctrl+Shift+N, opens straight in rename mode),
+  properties (Alt+Enter).
 - Cut / copy / paste through the Windows clipboard, so files can be pasted to and from other windows.
 - Drag & drop inside the app, from the desktop into the app, and out of the app.
 - Undo the last move with Ctrl+Z.

@@ -24,7 +24,15 @@ One SQLite file, `%LOCALAPPDATA%\file-organizer\index.db`:
 |---|---|
 | `files` | path (key), name, size, mtime, md5, suggestion, reason, dismissed, seen (scan generation) |
 | `moves` | undo log: batch, seq, op (`mv` / `mkdir` / `rmdir`), src, dst |
-| `settings` | `ai_enabled`, `ai_model_path` |
+| `settings` | `ai_enabled`, `ai_model_path`, `roots` (watched folders: path + display name, in order) |
+
+## Watched folders
+
+`load_roots` reads the user's list (default: the six user folders). `set_roots` applies a new list: nested folders are
+refused, new ones are watched and scanned at once, removed ones are unwatched and dropped from the index (files are
+never touched). `drive_watch` polls the drive letters every 3 s: new drives are announced to the UI; a listed folder
+whose drive comes back is re-watched and re-scanned; an unplugged one keeps its rows (the startup purge only touches
+folders that were scanned).
 
 ## Indexing
 

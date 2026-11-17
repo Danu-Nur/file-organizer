@@ -3,6 +3,24 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Choose the watched folders: add user folders, the user folder, OneDrive, drives or any folder; reorder and remove.
+- Plugged-in drives are detected and offered; unplugged listed drives keep their index and refresh on return.
+- Sorting by size uses the real total size of folders; the status bar shows the open folder's total.
+- Preview pane (Alt+P): images, PDF, audio, video, text/code, DOCX text and folder contents, with file details.
+- View menu: preview pane and hidden items (Ctrl+H) as check options.
+- Dashboard: headline figures; file types, folders, extensions and file age as chart or sortable table with
+  drill-down lists; largest files; most wasteful duplicates; clean-up suggestions.
+- Recycle Bin view: restore, delete permanently, empty; undo of Delete restores from the Recycle Bin.
+
+### Fixed
+- A new folder now reliably opens in rename mode (a redraw could close the name box).
+- The content security policy blocked Tauri's binary IPC channel, so every call fell back to the slower JSON path.
+- Index queries for folders at a drive root (`C:\`).
+- System folders and hidden items are no longer indexed when a whole drive is watched.
+
 ## [0.1.0] — 2026-11-17
 
 First public version.

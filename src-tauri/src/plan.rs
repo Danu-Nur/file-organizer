@@ -48,6 +48,19 @@ pub fn hidden(_: &std::fs::Metadata) -> bool {
     false
 }
 
+/// (hidden, system) attributes. Hidden+system items are protected OS files that stay out of view even when the user
+/// chooses to show hidden items.
+#[cfg(windows)]
+pub fn attrs(m: &std::fs::Metadata) -> (bool, bool) {
+    use std::os::windows::fs::MetadataExt;
+    let a = m.file_attributes();
+    (a & 0x2 != 0, a & 0x4 != 0)
+}
+#[cfg(not(windows))]
+pub fn attrs(_: &std::fs::Metadata) -> (bool, bool) {
+    (false, false)
+}
+
 /// md5 from the index when size+mtime still match, else read the file.
 fn md5_of(db: &Db, p: &Path, size: i64, mtime: i64) -> Option<String> {
     let cached: Option<String> = db.lock().unwrap()
@@ -191,7 +204,7 @@ pub fn analyze(db: &Db, root: &Path, folders: &[PathBuf], home_of: impl Fn(&Path
         }
     }
     let rel = |p: &str| p.strip_prefix(&*root.to_string_lossy()).map(|s| s.trim_start_matches('\\').to_string()).unwrap_or(p.to_string());
-    let root_prefix = format!("{}\\", root.to_string_lossy());
+    let root_prefix = crate::dir_prefix(&root.to_string_lossy());
     let mut dup_of: HashMap<usize, String> = HashMap::new();
     for (md5, idx) in &by_md5 {
         let outside: Option<String> = {

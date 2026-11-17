@@ -46,11 +46,28 @@ const I = {
   warn: '<path d="M10 3L2.5 16.5h15z"/><path d="M10 8v4M10 14.5v.1"/>',
   gear: '<circle cx="10" cy="10" r="2.5"/><path d="M8.6 2.5h2.8l.4 2 1.6.9 1.9-.7 1.4 2.4-1.5 1.4v1.9l1.5 1.4-1.4 2.4-1.9-.7-1.6.9-.4 2H8.6l-.4-2-1.6-.9-1.9.7-1.4-2.4 1.5-1.4V9.1L3.3 7.7l1.4-2.4 1.9.7 1.6-.9z"/>',
   info: '<circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.5v.1"/>',
+  plus: '<path d="M10 4v12M4 10h12"/>',
+  down: '<path d="M10 4v12M5 11l5 5 5-5"/>',
+  remove: '<path d="M4 10h12"/>',
+  home: '<path d="M3 9l7-6 7 6M5 7.5V17h10V7.5M8.5 17v-5h3v5"/>',
+  cloud: '<path d="M6 15.5h8.5a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.6 1.2A2.9 2.9 0 0 0 6 15.5z"/>',
+  drive: '<rect x="2.5" y="6" width="15" height="8" rx="1.5"/><path d="M5.5 10h5M14 10h.5"/>',
+  panel: '<rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M11.5 3.5v13"/>',
+  eye: '<path d="M2.5 10s3-5.5 7.5-5.5S17.5 10 17.5 10s-3 5.5-7.5 5.5S2.5 10 2.5 10z"/><circle cx="10" cy="10" r="2.3"/>',
+  close: '<path d="M5 5l10 10M15 5L5 15"/>',
+  chevDown: '<path d="M6 8l4 4 4-4"/>',
+  tick: '<path d="M4.5 10.5l3.5 3.5 7.5-8"/>',
+  none: '',
+  restore: '<path d="M4 10a6 6 0 1 0 1.8-4.3M4 3.5V7h3.5M10 7v3.5l2.5 1.5"/>',
+  chart: '<path d="M3.5 16.5h13"/><rect x="5" y="9" width="2.5" height="5.5" rx="1"/><rect x="9" y="5" width="2.5" height="9.5" rx="1"/><rect x="13" y="11" width="2.5" height="3.5" rx="1"/>',
+  bars: '<path d="M4 5.5h9M4 10h12M4 14.5h6"/>',
 };
+/** Navigation icon and colour per kind of watched place. */
+const KIND_ICON = { Desktop: 'Desktop', Downloads: 'Downloads', Documents: 'Documents', Pictures: 'Pictures', Music: 'Music', Videos: 'Videos', Home: 'home', OneDrive: 'cloud', Drive: 'drive', Folder: 'folder' };
 const icon = (n) => `<svg class="ic" viewBox="0 0 20 20" aria-hidden="true">${I[n] || ''}</svg>`;
 $$('[data-icon]').forEach((el) => (el.outerHTML = icon(el.dataset.icon)));
 
-const ROOT_COLOR = { Desktop: '#3a96dd', Downloads: '#13a10e', Documents: '#7a8fa6', Pictures: '#0078d4', Music: '#f7630c', Videos: '#8764b8' };
+const ROOT_COLOR = { Desktop: '#3a96dd', Downloads: '#13a10e', Documents: '#7a8fa6', Pictures: '#0078d4', Music: '#f7630c', Videos: '#8764b8', Home: '#e8a33c', OneDrive: '#0f6cbd', Drive: '#8a8a8a', Folder: '#e8a33c' };
 const CAT = {
   Folder: ['Folder', '#e8a33c'], Gambar: ['Gambar', '#0f6cbd'], Dokumen: ['Dokumen', '#2b579a'], Spreadsheet: ['Spreadsheet', '#217346'],
   Arsip: ['Arsip', '#c19c00'], Program: ['Program', '#5c2d91'], Kode: ['Kode', '#6e6e6e'], 'Model 3D': ['Model 3D', '#ca5010'],
@@ -72,7 +89,8 @@ const kb = (n) => `${nf.format(Math.ceil(n / 1024))} KB`; // Explorer shows ever
 const human = (n) => (n < 1048576 ? kb(n) : n < 1073741824 ? `${(n / 1048576).toLocaleString('id-ID', { maximumFractionDigits: 1 })} MB` : `${(n / 1073741824).toLocaleString('id-ID', { maximumFractionDigits: 2 })} GB`);
 const parentOf = (p) => { const i = p.lastIndexOf('\\'); if (i < 0) return p; const d = p.slice(0, i); return d.endsWith(':') ? d + '\\' : d; };
 const baseName = (p) => p.slice(p.lastIndexOf('\\') + 1) || p;
-const rootOf = (p) => S.roots.find((r) => p === r.path || p.startsWith(r.path + '\\'));
+const withSep = (p) => (p.endsWith('\\') ? p : p + '\\'); // "C:\" already ends with one
+const rootOf = (p) => S.roots.find((r) => p === r.path || p.startsWith(withSep(r.path)));
 const cmpText = new Intl.Collator('id-ID', { numeric: true, sensitivity: 'base' }).compare;
 /** "C:\Users\x\Downloads\Gambar" → "Downloads › Gambar" */
 function pretty(dir) {
@@ -92,6 +110,7 @@ const S = {
   counts: { all: 0, suggest: 0, dup: 0, scanning: true },
   clip: null, undo: [], kids: new Map(), open: new Set(), closed: new Set(), renaming: null, menuOpen: false,
   pane: 'explorer', sizes: new Map(), drag: null, dragStart: null, pendingSelect: null,
+  showHidden: store.get('hidden', false),
 };
 const isBrowse = () => S.view === 'browse';
 const browsing = () => isBrowse() && !S.q; // folder content straight from disk
@@ -101,11 +120,13 @@ const sortOf = () => S.sorts[browsing() ? 'browse' : 'db'];
 const COLS = [
   { k: 'name', label: 'Nama', w: 320, sort: 'name' },
   { k: 'suggest', label: 'Saran', w: 260, show: () => S.view === 'suggest' || (isBrowse() && S.vis.some((r) => r.suggest)) },
-  { k: 'loc', label: 'Lokasi', w: 220, sort: 'path', show: () => !browsing() && S.mode === 'list' },
+  { k: 'loc', label: 'Lokasi', w: 220, sort: 'path', show: () => !browsing() && S.mode === 'list' && S.view !== 'bin' },
   { k: 'mtime', label: 'Diubah', w: 140, sort: 'mtime' },
   { k: 'cat', label: 'Jenis', w: 100, show: () => S.view !== 'suggest' },
+  // Recycle Bin: where the item was before it was deleted
+  { k: 'origin', label: 'Lokasi asal', w: 260, sort: 'path', show: () => S.view === 'bin' },
   { k: 'size', label: 'Ukuran', w: 104, sort: 'size', num: true },
-  { k: 'md5', label: 'MD5', w: 110, sort: 'md5', show: () => S.view !== 'suggest' },
+  { k: 'md5', label: 'MD5', w: 110, sort: 'md5', show: () => S.view !== 'suggest' && S.view !== 'bin' },
 ];
 const widths = store.get('widths', {});
 const cols = () => COLS.filter((c) => !c.show || c.show());
@@ -119,19 +140,22 @@ function cell(c, r) {
         : S.mode === 'tree' ? '<span class="twisty none"></span>' : '';
       const pad = S.mode === 'tree' ? ` style="padding-left:${r.depth * 20}px"` : '';
       const cnt = r.synthetic ? ` <span class="count">${nf.format(r.count)}</span>` : '';
-      return `<td title="${esc(r.path)}"><div class="name"${pad}>${tw}${fileIcon(r.cat)}<span>${esc(r.name)}</span>${cnt}</div></td>`;
+      return `<td title="${esc(r.path)}"><div class="name"${pad}>${tw}${fileIcon(r.cat)}<span class="nm">${esc(r.name)}</span>${cnt}</div></td>`;
     }
     case 'suggest': {
       if (!r.suggest) return '<td></td>';
       return `<td title="${esc(r.reason || '')}"><span class="chip"><span class="dot" style="background:${catColor(r.suggest)}"></span>${esc(r.suggest.replaceAll('\\', ' › '))}</span><span class="reason">${esc(r.reason || '')}</span></td>`;
     }
     case 'loc': return `<td title="${esc(parentOf(r.path))}">${esc(pretty(parentOf(r.path)))}</td>`;
+    case 'origin': return `<td title="${esc(r.origin)}">${esc(pretty(parentOf(r.origin || '')))}</td>`;
     case 'mtime': return `<td>${r.mtime ? esc(df.format(new Date(r.mtime * 1000))) : ''}</td>`;
     case 'cat': return `<td>${r.synthetic ? 'Folder' : esc((CAT[r.cat] || CAT.Lainnya)[0])}</td>`;
     case 'size': {
       if (!r.is_dir) return `<td class="num sz">${kb(r.size)}</td>`;
+      if (r.bin) return '<td class="num sz"></td>'; // folders in the Recycle Bin are not measured
       const z = S.sizes.get(r.path);
-      return `<td class="num sz"${z ? ` title="${nf.format(z.files)} file"` : ''}>${z ? human(z.size) : ''}</td>`;
+      if (r.synthetic) return '<td class="num sz"></td>';
+      return `<td class="num sz"${z ? ` title="${nf.format(z.files)} file"` : ' title="Menghitung ukuran…"'}>${z ? human(z.size) : '<span class="muted">…</span>'}</td>`;
     }
     case 'md5': return `<td class="mono" title="${esc(r.md5 || '')}">${esc((r.md5 || '').slice(0, 10))}</td>`;
   }
@@ -145,11 +169,18 @@ async function load() {
   const counts = invoke('counts').catch(() => S.counts);
   try {
     let rows;
-    if (browsing()) {
-      rows = await invoke('browse', { path: S.cwd });
+    if (S.view === 'bin') {
+      const { sort, desc } = S.sorts.db;
+      const q = S.q.toLowerCase();
+      const key = { name: (r) => r.name.toLowerCase(), size: (r) => r.size, path: (r) => r.origin.toLowerCase() }[sort] || ((r) => r.mtime);
+      rows = (await invoke('bin_list')).map((b) => ({ ...b, mtime: b.deleted, bin: true }))
+        .filter((r) => !q || r.name.toLowerCase().includes(q))
+        .sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0) * (desc ? -1 : 1));
+    } else if (browsing()) {
+      rows = await invoke('browse', { path: S.cwd, showHidden: S.showHidden });
       if (S.mode === 'tree') {
         for (const p of [...S.open]) {
-          try { S.kids.set(p, await invoke('browse', { path: p })); } catch { S.open.delete(p); S.kids.delete(p); }
+          try { S.kids.set(p, await invoke('browse', { path: p, showHidden: S.showHidden })); } catch { S.open.delete(p); S.kids.delete(p); }
         }
       }
     } else {
@@ -177,7 +208,21 @@ function requestSizes() {
   if (!browsing()) return;
   const now = Date.now();
   const dirs = S.vis.filter((r) => r.is_dir && !r.synthetic && !(S.sizes.get(r.path)?.t > now - 60000)).map((r) => r.path).slice(0, 300);
-  if (dirs.length) invoke('folder_sizes', { paths: dirs });
+  // Re-asking for the same folders would restart the one being measured; only ask when the set changed.
+  const key = dirs.join('|');
+  if (!dirs.length || key === S.sizeKey) return;
+  S.sizeKey = key;
+  invoke('folder_sizes', { paths: dirs });
+}
+/** Folder total when all subfolder sizes are known, else a lower bound. */
+function folderTotal() {
+  let sum = 0;
+  let pending = 0;
+  for (const r of S.rows) {
+    if (!r.is_dir) sum += r.size;
+    else { const z = S.sizes.get(r.path); z ? (sum += z.size) : pending++; }
+  }
+  return { sum, pending };
 }
 
 function sortEntries(list) {
@@ -187,7 +232,9 @@ function sortEntries(list) {
     name: (a, b) => cmpText(a.name, b.name), path: (a, b) => cmpText(a.path, b.path),
     size: (a, b) => sizeOf(a) - sizeOf(b), mtime: (a, b) => a.mtime - b.mtime, md5: (a, b) => cmpText(a.md5 || '', b.md5 || ''),
   }[sort] || ((a, b) => cmpText(a.name, b.name));
-  return [...list].sort((a, b) => (b.is_dir - a.is_dir) || d * by(a, b) || cmpText(a.name, b.name)); // folders first, like Explorer
+  // Folders first (like Explorer), except when sorting by size: then folders compete with their real total size.
+  if (sort === 'size') return [...list].sort((a, b) => d * by(a, b) || cmpText(a.name, b.name));
+  return [...list].sort((a, b) => (b.is_dir - a.is_dir) || d * by(a, b) || cmpText(a.name, b.name));
 }
 
 /** Rows as shown: a flat list, or a tree (folders on disk, or folders rebuilt from the paths of search/DB results). */
@@ -202,7 +249,7 @@ function build() {
       }
     };
     walk(S.rows, 0);
-  } else if (S.mode === 'tree') {
+  } else if (S.mode === 'tree' && S.view !== 'bin') {
     const top = new Map();
     const node = (map, path, name) => map.get(path) || map.set(path, { path, name, dirs: new Map(), files: [], count: 0 }).get(path);
     for (const r of S.rows) {
@@ -243,16 +290,21 @@ function renderNav() {
        <span style="${color ? `color:${color}` : ''}">${icon(ic)}</span><span class="label">${esc(label)}</span>${extra}</button>`;
   $('#nav').innerHTML =
     '<div class="nav-head">Rapikan</div>' +
+    item('dash', 'chart', 'Dashboard') +
     item('suggest', 'sparkle', 'Saran', `<span class="badge accent" data-n="${S.counts.suggest}">${nf.format(S.counts.suggest)}</span>`, 'var(--accent)') +
     item('dup', 'dup', 'Duplikat', `<span class="badge" data-n="${S.counts.dup}">${nf.format(S.counts.dup)}</span>`) +
     item('all', 'all', 'Semua file', `<span class="count">${nf.format(S.counts.all)}</span>`) +
-    '<div class="nav-sep"></div><div class="nav-head">Folder</div>' +
-    S.roots.map((r) => item(r.path, r.name, r.name, '', ROOT_COLOR[r.name])).join('') +
+    `<div class="nav-sep"></div><div class="nav-head row">Folder<button class="btn icon add" data-addroot title="Tambah folder atau drive" aria-label="Tambah folder atau drive">${icon('plus')}</button></div>` +
+    (S.roots.length ? S.roots.map((r) => item(r.path, KIND_ICON[r.kind] || 'folder', r.name, r.online ? '' : '<span class="count">tidak terhubung</span>', ROOT_COLOR[r.kind])).join('')
+      : '<p class="nav-empty">Belum ada folder. Klik + untuk menambah.</p>') +
+    item('bin', 'trash', 'Recycle Bin', '', 'var(--text2)') +
     '<div class="nav-sep"></div>' +
     item('settings', 'gear', 'Pengaturan', AI.status?.enabled ? '<span class="count">AI aktif</span>' : '');
-  if (S.pane !== 'explorer') {
+  S.roots.filter((r) => !r.online).forEach((r) => $(`.nav-item[data-view="${CSS.escape(r.path)}"]`)?.classList.add('off'));
+  if (S.pane !== 'explorer' || S.view.includes(':')) {
     $$('.nav-item').forEach((b) => b.removeAttribute('aria-current'));
-    if (S.pane === 'settings') $('.nav-item[data-view="settings"]')?.setAttribute('aria-current', 'page');
+    const on = S.pane === 'settings' ? 'settings' : 'dash'; // a drill-down belongs to the dashboard
+    if (S.pane !== 'tidy') $(`.nav-item[data-view="${on}"]`)?.setAttribute('aria-current', 'page');
   }
 }
 
@@ -260,7 +312,19 @@ const VIEWS = {
   suggest: { title: 'Saran', sub: () => (S.counts.suggest ? `${nf.format(S.counts.suggest)} file baru menunggu keputusan. Tidak ada yang dipindah tanpa persetujuanmu.` : 'File baru di folder utama akan muncul di sini.') },
   dup: { title: 'Duplikat', sub: () => 'File dengan isi sama persis (MD5 sama), dikelompokkan per isi.' },
   all: { title: 'Semua file', sub: () => `${nf.format(S.counts.all)} file terindeks — hanya nama, lokasi, ukuran, dan MD5. Isi file tidak disimpan.` },
+  bin: { title: 'Recycle Bin', sub: () => `${nf.format(S.rows.length)} item · ${human(S.rows.reduce((a, r) => a + r.size, 0))}. Item bisa dipulihkan ke lokasi asalnya.` },
 };
+/** Title/subtitle of a view, including the dashboard drill-downs "cat:", "ext:" and "year:". */
+function viewMeta(v) {
+  if (VIEWS[v]) return VIEWS[v];
+  const [k, val] = v.split(':');
+  const title = k === 'cat' ? `Jenis: ${(CAT[val] || [val])[0]}` : k === 'ext' ? `Ekstensi: ${val ? `.${val}` : '(tanpa ekstensi)'}` : `Diubah tahun ${val}`;
+  return {
+    title,
+    sub: () => `${nf.format(S.rows.length)}${S.rows.length >= 2000 ? '+' : ''} file · ${human(S.rows.reduce((a, r) => a + r.size, 0))} di folder yang dipantau`,
+    drill: true,
+  };
+}
 
 function renderHead() {
   const addr = $('#addr');
@@ -285,15 +349,18 @@ function renderHead() {
     $('[data-nav="fwd"]').disabled = S.hi >= S.hist.length - 1;
     $('[data-nav="up"]').disabled = parentOf(S.cwd) === S.cwd;
   } else {
-    $('#title').textContent = VIEWS[S.view].title;
-    $('#subtitle').textContent = VIEWS[S.view].sub();
+    const m = viewMeta(S.view);
+    $('#title').textContent = m.title;
+    $('#subtitle').innerHTML = esc(m.sub()) + (m.drill ? ` <button class="btn std back-dash" data-back-dash>${icon('back')}Dashboard</button>` : '');
     $('#subtitle').hidden = false;
   }
-  $('#q').placeholder = `Cari di ${isBrowse() ? baseName(S.cwd) : VIEWS[S.view].title}`;
+  $('#q').placeholder = `Cari di ${isBrowse() ? baseName(S.cwd) : viewMeta(S.view).title}`;
   $$('#modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode));
 }
 
 function render() {
+  // A rename box is open: redrawing would destroy it. finishing the rename reloads and redraws.
+  if (S.renaming) return;
   renderNav();
   renderHead();
   const cs = cols();
@@ -302,7 +369,8 @@ function render() {
   $('#grid').style.width = `${cs.reduce((a, c) => a + colW(c), 0)}px`;
   $('#head').innerHTML = cs.map((c) => {
     const on = c.sort && sort === c.sort;
-    return `<th class="${c.sort ? 'sortable' : ''} ${c.num ? 'num' : ''}" data-sort="${c.sort || ''}" data-k="${c.k}" scope="col"${c.sort ? ` aria-sort="${on ? (desc ? 'descending' : 'ascending') : 'none'}"` : ''}>${c.label}${on ? `<span class="chev">${desc ? '▼' : '▲'}</span>` : ''}<span class="grip" data-grip="${c.k}"></span></th>`;
+    const label = c.k === 'mtime' && S.view === 'bin' ? 'Dihapus' : c.label;
+    return `<th class="${c.sort ? 'sortable' : ''} ${c.num ? 'num' : ''}" data-sort="${c.sort || ''}" data-k="${c.k}" scope="col"${c.sort ? ` aria-sort="${on ? (desc ? 'descending' : 'ascending') : 'none'}"` : ''}>${label}${on ? `<span class="chev">${desc ? '▼' : '▲'}</span>` : ''}<span class="grip" data-grip="${c.k}"></span></th>`;
   }).join('');
 
   let html = '';
@@ -314,13 +382,17 @@ function render() {
       const n = S.vis.filter((x) => x.md5 === r.md5).length;
       html += `<tr class="group"><td colspan="${cs.length}">${n} file identik · ${human(r.size)} per file<span class="mono">${esc(r.md5)}</span></td></tr>`;
     }
-    const cut = S.clip?.cut && S.clip.paths.includes(r.path) ? ' cut' : '';
+    const cut = (S.clip?.cut && S.clip.paths.includes(r.path) ? ' cut' : '') + (r.hidden ? ' hid' : '');
     html += `<tr class="row${cut}" data-i="${i}" aria-selected="${S.sel.has(r.path)}"${r.is_dir ? ` aria-expanded="${!!r.expanded}"` : ''}>${cs.map((c) => cell(c, r)).join('')}</tr>`;
   });
   $('#rows').innerHTML = html;
   renderEmpty();
   paintSel(false);
   requestSizes();
+  if (S.pendingRename) {
+    const r = S.vis.find((x) => x.path === S.pendingRename);
+    if (r) { S.pendingRename = null; startRename(r); }
+  }
 }
 
 function renderEmpty() {
@@ -358,11 +430,21 @@ function paintSel(scroll = true) {
   btn('paste').disabled = !pasteTarget(); // the clipboard may hold files copied in File Explorer too
   for (const a of ['cut', 'copy', 'delete']) btn(a).disabled = !real.length;
   btn('rename').disabled = real.length !== 1;
+  const inBin = S.view === 'bin';
+  if (S.pane === 'explorer') { $('#filecmds').hidden = inBin; $('#bincmds').hidden = !inBin; }
+  btn('binRestore').disabled = btn('binPurge').disabled = !sel.length;
+  btn('binEmpty').disabled = !S.rows.length;
 
-  $('#st-items').textContent = `${nf.format(S.vis.filter((r) => !r.synthetic).length)} item${S.rows.length >= 2000 && !browsing() ? ' (2.000 teratas — persempit pencarian)' : ''}`;
+  let total = '';
+  if (browsing()) {
+    const t = folderTotal();
+    total = t.pending ? `  ·  total ≥ ${human(t.sum)} (menghitung ${t.pending} folder…)` : `  ·  total ${human(t.sum)}`;
+  }
+  $('#st-items').textContent = `${nf.format(S.vis.filter((r) => !r.synthetic).length)} item${S.rows.length >= 2000 && !browsing() ? ' (2.000 teratas — persempit pencarian)' : ''}${total}`;
   $('#st-sel').textContent = sel.length ? `${nf.format(sel.length)} item dipilih  ${human(real.reduce((a, r) => a + (r.size || 0), 0))}` : '';
   $('#st-clip').textContent = S.clip ? `${S.clip.paths.length} item ${S.clip.cut ? 'dipotong' : 'disalin'} — Ctrl+V untuk menempel` : '';
   $('#st-watch').innerHTML = S.counts.scanning ? '<span class="ring"></span>Mengindeks…' : `Memantau ${S.roots.length} folder`;
+  schedulePreview();
 }
 
 // ================================================================ navigation
@@ -374,10 +456,13 @@ function setPane(name) {
   $('#explorer').hidden = name !== 'explorer';
   $('#tidy').hidden = name !== 'tidy';
   $('#settings').hidden = name !== 'settings';
+  $('#dashboard').hidden = name !== 'dashboard';
   const full = name === 'explorer';
   $('#filecmds').hidden = $('#modes').hidden = $('#searchbox').hidden = !full;
+  $('#bincmds').hidden = !full || S.view !== 'bin';
+  $('#pvbtn').hidden = $('#viewbtn').hidden = !full; // view options only apply to the file list
   $('.cmdbar [data-act="tidy"]').hidden = !full;
-  if (!full) { $('#st-sel').textContent = $('#st-clip').textContent = ''; $('#st-items').textContent = name === 'tidy' ? 'Rapikan folder' : 'Pengaturan'; }
+  if (!full) { $('#st-sel').textContent = $('#st-clip').textContent = ''; $('#st-items').textContent = { tidy: 'Rapikan folder', settings: 'Pengaturan', dashboard: 'Dashboard' }[name]; }
   closeMenu();
   renderNav();
 }
@@ -419,7 +504,7 @@ async function toggle(r, open = !r.expanded) {
   if (open) {
     S.open.add(r.path);
     if (!S.kids.has(r.path)) {
-      try { S.kids.set(r.path, await invoke('browse', { path: r.path })); } catch (e) { S.open.delete(r.path); toast(String(e), { error: true }); }
+      try { S.kids.set(r.path, await invoke('browse', { path: r.path, showHidden: S.showHidden })); } catch (e) { S.open.delete(r.path); toast(String(e), { error: true }); }
     }
   } else {
     S.open.delete(r.path);
@@ -431,6 +516,7 @@ async function toggle(r, open = !r.expanded) {
 /** Double-click / Enter: a folder opens (navigates into it), a file opens in its app. */
 function activate(r) {
   if (!r) return;
+  if (r.bin) return toast('Item di Recycle Bin perlu dipulihkan dulu sebelum dibuka.');
   if (r.is_dir) go(r.path);
   else act('open', [r]);
 }
@@ -446,10 +532,15 @@ function toast(msg, { error = false, action = null, ms } = {}) {
   setTimeout(() => t.remove(), ms ?? (error ? 8000 : action ? 9000 : 3500));
 }
 const undoAction = (batch) => batch ? { label: 'Urungkan', fn: () => undo(batch) } : null;
+/** Undo a move batch (number) or a delete ({ bin: [original paths] } → restore from the Recycle Bin). */
 async function undo(batch = S.undo.pop()) {
   if (!batch) return toast('Tidak ada yang bisa diurungkan.');
   S.undo = S.undo.filter((b) => b !== batch);
-  try { await invoke('undo_batch', { batch }); toast('Diurungkan'); } catch (e) { toast(`Sebagian tidak bisa diurungkan:\n${e}`, { error: true }); }
+  try {
+    if (batch.bin) await invoke('bin_restore_paths', { paths: batch.bin });
+    else await invoke('undo_batch', { batch });
+    toast(batch.bin ? 'Dipulihkan dari Recycle Bin' : 'Diurungkan');
+  } catch (e) { toast(`Sebagian tidak bisa diurungkan:\n${e}`, { error: true }); }
   load();
 }
 
@@ -461,8 +552,32 @@ function pasteTarget(rows = selected(), into = false) {
 
 async function act(kind, rows = selected()) {
   const real = rows.filter((r) => !r.synthetic);
+  // In the Recycle Bin only restore / delete permanently make sense; Delete means "delete permanently".
+  if (S.view === 'bin' && S.pane === 'explorer') {
+    if (kind === 'delete') kind = 'binPurge';
+    if (!['binRestore', 'binPurge', 'binEmpty', 'copyPath', 'preview', 'viewMenu', 'reveal'].includes(kind)) return;
+  }
   try {
     switch (kind) {
+      case 'binRestore': {
+        if (!rows.length) return;
+        const n = await invoke('bin_restore', { ids: rows.map((r) => r.path) });
+        toast(`${n} item dipulihkan ke lokasi asalnya`);
+        resetSel();
+        return load();
+      }
+      case 'binPurge':
+      case 'binEmpty': {
+        const all = kind === 'binEmpty';
+        const n = all ? S.rows.length : rows.length;
+        if (!n) return;
+        if (!(await confirmDialog(all ? 'Kosongkan Recycle Bin?' : `Hapus permanen ${n} item?`,
+          `${n} item akan dihapus selamanya dan tidak bisa dipulihkan lagi.`, 'Hapus permanen'))) return;
+        await invoke('bin_purge', { ids: all ? [] : rows.map((r) => r.path) });
+        toast(`${n} item dihapus permanen`);
+        resetSel();
+        return load();
+      }
       case 'open': {
         const dir = rows.find((r) => r.is_dir);
         if (dir) return go(dir.path);
@@ -472,7 +587,7 @@ async function act(kind, rows = selected()) {
       case 'openLocation': return rows[0] && go(rows[0].is_dir ? rows[0].path : parentOf(rows[0].path));
       case 'reveal': return rows[0] && invoke('reveal', { path: rows[0].path });
       case 'copyPath':
-        await navigator.clipboard.writeText(rows.map((r) => r.path).join('\r\n'));
+        await navigator.clipboard.writeText(rows.map((r) => r.origin || r.path).join('\r\n'));
         return toast(rows.length > 1 ? `${rows.length} path disalin` : 'Path disalin');
       case 'copyMd5':
         await navigator.clipboard.writeText(real.map((r) => r.md5 || '').join('\r\n'));
@@ -498,11 +613,22 @@ async function act(kind, rows = selected()) {
         return load();
       }
       case 'props': return rows[0] && showProps(rows[0].path);
+      case 'preview': return setPreview(!S.previewOn);
+      case 'viewMenu': {
+        // Explorer's "View ▸ Show": options with a check mark, remembered.
+        const r = $('#viewbtn').getBoundingClientRect();
+        return showMenuAt(
+          '<div class="menu-head">Tampilkan</div>' +
+          mi('data-viewopt="preview"', S.previewOn ? 'tick' : 'none', 'Panel pratinjau', false, 'Alt+P') +
+          mi('data-viewopt="hidden"', S.showHidden ? 'tick' : 'none', 'Item tersembunyi', false, 'Ctrl+H'), r.left, r.bottom + 4);
+      }
       case 'rename': return real.length === 1 && startRename(real[0]);
       case 'delete': {
         if (!real.length) return;
-        const n = await invoke('trash_items', { paths: real.map((r) => r.path) });
-        toast(`${n} item dipindah ke Recycle Bin`);
+        const paths = real.map((r) => r.path);
+        const n = await invoke('trash_items', { paths });
+        S.undo.push({ bin: paths });
+        toast(`${n} item dipindah ke Recycle Bin`, { action: { label: 'Urungkan', fn: () => undo(S.undo.find((u) => u.bin === paths)) } });
         resetSel();
         return load();
       }
@@ -511,10 +637,8 @@ async function act(kind, rows = selected()) {
         const p = await invoke('new_folder', { parent: S.cwd });
         S.sel = new Set([p]);
         S.focusPath = p;
-        await load();
-        const r = S.vis.find((x) => x.path === p);
-        if (r) startRename(r);
-        return;
+        S.pendingRename = p; // render() opens the name box as soon as the new row is on screen
+        return load();
       }
       case 'apply': {
         let ok = 0;
@@ -549,13 +673,14 @@ function startRename(r) {
   const i = S.vis.findIndex((x) => x.path === r.path);
   const tr = $(`#rows tr[data-i="${i}"]`);
   if (!tr) return;
-  const span = $('.name > span', tr);
+  const span = $('.nm', tr);
   const inp = document.createElement('input');
   inp.className = 'rename';
   inp.value = r.name;
   inp.setAttribute('aria-label', 'Nama baru');
   span.replaceWith(inp);
   S.renaming = r.path;
+  tr.scrollIntoView({ block: 'nearest' });
   inp.focus();
   const dot = r.is_dir ? -1 : r.name.lastIndexOf('.');
   inp.setSelectionRange(0, dot > 0 ? dot : r.name.length); // like Explorer: the extension is not selected
@@ -612,7 +737,11 @@ function openMenu(x, y, onRow) {
   const b = (a, ic, label, key = '', disabled = false) =>
     `<button role="menuitem" data-act="${a}"${disabled ? ' disabled' : ''}>${icon(ic)}${esc(label)}<span class="key">${key}</span></button>`;
   let html;
-  if (onRow && sel.length) {
+  if (S.view === 'bin') {
+    if (!onRow || !sel.length) return;
+    html = b('binRestore', 'restore', sel.length > 1 ? `Pulihkan ${sel.length} item` : 'Pulihkan') +
+      b('binPurge', 'trash', 'Hapus permanen', 'Del') + '<hr>' + b('copyPath', 'link', 'Salin lokasi asal');
+  } else if (onRow && sel.length) {
     html = b('open', 'open', one?.is_dir ? 'Buka' : sel.length > 1 ? `Buka ${Math.min(real.length, 10)} file` : 'Buka', 'Enter') +
       (!browsing() ? b('openLocation', 'folder', 'Buka lokasi file') : '') +
       b('reveal', 'folder', 'Tampilkan di File Explorer') +
@@ -654,6 +783,306 @@ function confirmDialog(title, text, ok = 'OK') {
     d.querySelector('[data-r="1"]').focus();
   });
 }
+
+// ================================================================ preview pane (Alt+P)
+const EXT = (name) => (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
+const PV = {
+  image: { exts: 'png jpg jpeg gif webp bmp ico svg avif', max: 40 << 20 },
+  pdf: { exts: 'pdf', max: 80 << 20 },
+  audio: { exts: 'mp3 wav m4a ogg flac aac', max: 120 << 20 },
+  video: { exts: 'mp4 webm mov m4v', max: 300 << 20 },
+  text: { exts: 'txt md csv json js ts tsx jsx css html htm xml yml yaml log ini cfg conf sql py rs php sh bat ps1 cmd reg env gitignore toml lock map mq5 bib vcf srt docx' },
+};
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', ico: 'image/x-icon', svg: 'image/svg+xml', avif: 'image/avif',
+  pdf: 'application/pdf', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', ogg: 'audio/ogg', flac: 'audio/flac', aac: 'audio/aac', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/mp4', m4v: 'video/mp4' };
+const pvKind = (r) => (r.is_dir ? 'folder' : Object.keys(PV).find((k) => PV[k].exts.split(' ').includes(EXT(r.name))) || 'none');
+
+let pvReq = 0;
+let pvUrl = null;
+let pvKey = '';
+let pvTimer;
+function setPreview(on) {
+  S.previewOn = on;
+  store.set('preview', on);
+  $('#pvbtn').setAttribute('aria-pressed', on);
+  $('#preview').hidden = $('#pvgrip').hidden = !on;
+  pvKey = '';
+  schedulePreview();
+}
+/** View option "Item tersembunyi": hidden files and folders are listed (dimmed); protected OS files never are. */
+function setHidden(on) {
+  S.showHidden = on;
+  store.set('hidden', on);
+  S.kids.clear();
+  toast(on ? 'Item tersembunyi ditampilkan' : 'Item tersembunyi disembunyikan');
+  load();
+}
+
+/** Called whenever the selection may have changed; only reloads when it really did. */
+function schedulePreview() {
+  if (!S.previewOn) return;
+  const key = selected().map((r) => r.path).join('|');
+  if (key === pvKey) return;
+  pvKey = key;
+  clearTimeout(pvTimer);
+  pvTimer = setTimeout(updatePreview, 120);
+}
+
+async function updatePreview() {
+  const el = $('#pv-content');
+  const id = ++pvReq;
+  if (pvUrl) { URL.revokeObjectURL(pvUrl); pvUrl = null; }
+  const sel = selected();
+  if (!sel.length) {
+    el.innerHTML = `<div class="pv-empty">${icon('panel')}<b>Pratinjau</b><p>Pilih file atau folder untuk melihat isinya di sini.</p></div>`;
+    return;
+  }
+  if (sel.length > 1) {
+    const files = sel.filter((r) => !r.is_dir);
+    const size = files.reduce((a, r) => a + (r.size || 0), 0) + sel.filter((r) => r.is_dir).reduce((a, r) => a + (S.sizes.get(r.path)?.size || 0), 0);
+    el.innerHTML = `<div class="pv-empty">${icon('copy')}<b>${sel.length} item dipilih</b><p>${files.length} file · ${sel.length - files.length} folder · ${human(size)}</p></div>`;
+    return;
+  }
+  const r = sel[0];
+  const kind = pvKind(r);
+  const z = r.is_dir ? S.sizes.get(r.path) : null;
+  const meta = [
+    ['Jenis', r.synthetic || r.is_dir ? 'Folder' : `${(CAT[r.cat] || CAT.Lainnya)[0]}${EXT(r.name) ? ` (.${EXT(r.name)})` : ''}`],
+    ['Ukuran', r.is_dir ? (z ? `${human(z.size)} · ${nf.format(z.files)} file` : '…') : human(r.size)],
+    [r.bin ? 'Dihapus' : 'Diubah', r.mtime ? df.format(new Date(r.mtime * 1000)) : '—'],
+    [r.bin ? 'Asal' : 'Lokasi', r.bin ? parentOf(r.origin) : pretty(parentOf(r.path))],
+  ];
+  if (r.md5) meta.push(['MD5', `<span class="mono">${esc(r.md5)}</span>`]);
+  const sug = r.suggest ? `<div class="pv-sug"><span class="chip"><span class="dot" style="background:${catColor(r.suggest)}"></span>→ ${esc(r.suggest.replaceAll('\\', ' › '))}</span>
+      <button class="btn primary sm2" data-pv="apply">Pindah</button></div>` : '';
+  el.innerHTML = `<div class="pv-body" id="pv-body"><div class="pv-loading"><span class="ring"></span>Memuat pratinjau…</div></div>
+    <div class="pv-info"><div class="pv-title">${fileIcon(r.is_dir ? 'Folder' : r.cat)}<b title="${esc(r.name)}">${esc(r.name)}</b></div>${sug}
+      <dl>${meta.map(([k, v]) => `<dt>${k}</dt><dd>${k === 'MD5' ? v : esc(v)}</dd>`).join('')}</dl>
+      <div class="pv-actions">${r.bin ? `<button class="btn primary" data-pv="restore">${icon('restore')}Pulihkan</button>`
+        : `<button class="btn std" data-pv="open">${icon('open')}Buka</button><button class="btn std" data-pv="reveal">${icon('folder')}Di Explorer</button>`}</div></div>`;
+  const body = $('#pv-body');
+  const none = (msg) => { if (id === pvReq) body.innerHTML = `<div class="pv-none">${fileIcon(r.is_dir ? 'Folder' : r.cat)}<p>${esc(msg)}</p></div>`; };
+  try {
+    if (kind === 'folder') {
+      const kids = sortByName(await invoke('browse', { path: r.path, showHidden: S.showHidden }));
+      if (id !== pvReq) return;
+      if (!kids.length) return none('Folder ini kosong.');
+      kids.sort((a, b) => b.is_dir - a.is_dir);
+      body.innerHTML = `<ul class="pv-list">${kids.slice(0, 200).map((k) => `<li title="${esc(k.name)}">${fileIcon(k.is_dir ? 'Folder' : k.cat)}<span>${esc(k.name)}</span><small>${k.is_dir ? '' : human(k.size)}</small></li>`).join('')}</ul>
+        ${kids.length > 200 ? `<p class="pv-more">+ ${nf.format(kids.length - 200)} item lainnya</p>` : ''}`;
+    } else if (kind === 'text') {
+      const t = await invoke('preview_text', { path: r.path });
+      if (id !== pvReq) return;
+      if (!t.trim()) return none('File ini kosong.');
+      const pre = document.createElement('pre');
+      pre.className = 'pv-text';
+      pre.textContent = t; // shown as text, never rendered as HTML
+      body.replaceChildren(pre);
+    } else if (kind !== 'none') {
+      const buf = await invoke('preview_bytes', { path: r.path, max: PV[kind].max });
+      if (id !== pvReq) return;
+      // ArrayBuffer over the binary IPC channel; a plain number array if the JSON fallback was used.
+      pvUrl = URL.createObjectURL(new Blob([new Uint8Array(buf)], { type: MIME[EXT(r.name)] || 'application/octet-stream' }));
+      body.innerHTML = kind === 'image' ? `<img class="pv-img" src="${pvUrl}" alt="${esc(r.name)}">`
+        : kind === 'pdf' ? `<iframe class="pv-frame" src="${pvUrl}" title="${esc(r.name)}"></iframe>`
+          : kind === 'audio' ? `<div class="pv-none">${fileIcon(r.cat)}<audio controls src="${pvUrl}"></audio></div>`
+            : `<video class="pv-img" controls src="${pvUrl}"></video>`;
+    } else {
+      none('Tidak ada pratinjau untuk jenis file ini.');
+    }
+  } catch (e) { none(String(e)); }
+}
+
+$('#preview').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pv]');
+  if (!b) return;
+  if (b.dataset.pv === 'close') return setPreview(false);
+  const r = selected()[0];
+  if (!r) return;
+  if (b.dataset.pv === 'restore') act('binRestore', [r]);
+  if (b.dataset.pv === 'open') activate(r);
+  if (b.dataset.pv === 'reveal') act('reveal', [r]);
+  if (b.dataset.pv === 'apply') act('apply', [r]);
+});
+// drag the divider to resize the pane (width remembered)
+$('#pvgrip').addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  const x0 = e.clientX;
+  const w0 = $('#preview').getBoundingClientRect().width;
+  const move = (ev) => { const w = Math.max(240, Math.min(innerWidth * 0.6, w0 - (ev.clientX - x0))); $('#preview').style.width = `${w}px`; };
+  const up = () => { removeEventListener('mousemove', move); removeEventListener('mouseup', up); store.set('previewW', $('#preview').getBoundingClientRect().width); };
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
+});
+
+// ================================================================ Dashboard
+const D = { data: null, mode: store.get('dashModes', {}), sort: {}, lists: {} };
+async function openDash() {
+  T.on = false;
+  setPane('dashboard');
+  renderDash();
+  try { D.data = await invoke('dashboard'); } catch (e) { toast(String(e), { error: true }); }
+  if (S.pane === 'dashboard') renderDash();
+}
+const pct = (n, total) => (total ? (n * 100) / total : 0);
+const pctTxt = (p) => (p > 0 && p < 1 ? '<1%' : `${Math.round(p)}%`);
+const NAME_OF = {
+  cat: (b) => (CAT[b.label] || [b.label])[0],
+  ext: (b) => (b.label ? `.${b.label}` : '(tanpa ekstensi)'),
+  root: (b) => b.label,
+  year: (b) => b.label,
+};
+const tipOf = (key, b, total) => `${NAME_OF[key](b)}\n${human(b.size)} · ${pctTxt(pct(b.size, total))} dari total\n${nf.format(b.files)} file — klik untuk melihat daftarnya`;
+
+/** Ranked bars, one hue, largest first; name + count on the left, size + share on the right (no legend needed). */
+function meterChart(key, rows, total) {
+  const max = Math.max(...rows.map((b) => b.size), 1);
+  const shown = [...rows].sort((a, b) => b.size - a.size).slice(0, 12);
+  return `<div class="meters">${shown.map((b) => `<div class="meter link" data-open="${key}:${rows.indexOf(b)}" data-tip="${esc(tipOf(key, b, total))}" tabindex="0" role="button" aria-label="${esc(`${NAME_OF[key](b)}: ${human(b.size)}, ${pctTxt(pct(b.size, total))}, ${b.files} file`)}">
+      <span class="m-name">${esc(NAME_OF[key](b))}<small>${nf.format(b.files)}</small></span>
+      <span class="m-bar"><i style="width:${Math.max(0.6, (b.size * 100) / max)}%"></i></span>
+      <span class="m-val">${human(b.size)} · ${pctTxt(pct(b.size, total))}</span></div>`).join('')}</div>
+    ${rows.length > 12 ? `<p class="more">+ ${rows.length - 12} lainnya — lihat mode Daftar</p>` : ''}`;
+}
+
+/** Size per year modified: thin columns on one baseline; the tallest one carries its value, the rest on hover. */
+function yearChart(rows, total) {
+  const max = Math.max(...rows.map((b) => b.size), 1);
+  const top = rows.reduce((a, b) => (b.size > a.size ? b : a), rows[0]);
+  const step = rows.length > 14 ? 2 : 1;
+  return `<div class="cols">${rows.map((b, i) => `<div class="c" data-open="year:${i}" data-tip="${esc(tipOf('year', b, total))}" tabindex="0" role="button" aria-label="${esc(`${b.label}: ${human(b.size)}`)}">
+      ${b === top ? `<b>${human(b.size)}</b>` : ''}<i style="height:${Math.max(1.5, (b.size * 100) / max)}%"></i></div>`).join('')}</div>
+    <div class="col-labels">${rows.map((b, i) => `<span>${i % step === 0 || i === rows.length - 1 ? `'${b.label.slice(2)}` : ''}</span>`).join('')}</div>`;
+}
+
+/** Sortable table view of the same rows (the accessible alternative to the chart). */
+function bucketTable(key, rows, total) {
+  const s = D.sort[key] || { k: 'size', desc: true };
+  const val = { name: (b) => NAME_OF[key](b).toLowerCase(), files: (b) => b.files, size: (b) => b.size };
+  const sorted = rows.map((b, i) => ({ b, i })).sort((x, y) => {
+    const a = val[s.k](x.b);
+    const c = val[s.k](y.b);
+    return (a < c ? -1 : a > c ? 1 : 0) * (s.desc ? -1 : 1);
+  });
+  const th = (k, label, num) => `<th class="sortable${num ? ' num' : ''}" data-dsort="${key}:${k}" aria-sort="${s.k === k ? (s.desc ? 'descending' : 'ascending') : 'none'}">${label}${s.k === k ? `<span class="chev">${s.desc ? '▼' : '▲'}</span>` : ''}</th>`;
+  return `<div class="dtable-wrap"><table class="dtable"><thead><tr>${th('name', 'Nama')}${th('files', 'File', 1)}${th('size', 'Ukuran', 1)}<th class="num">%</th></tr></thead>
+    <tbody>${sorted.map(({ b, i }) => `<tr data-open="${key}:${i}" tabindex="0"><td>${esc(NAME_OF[key](b))}</td><td class="num">${nf.format(b.files)}</td><td class="num">${human(b.size)}</td><td class="num">${pctTxt(pct(b.size, total))}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function bucketCard(key, title, note, rows, total, chart) {
+  const mode = D.mode[key] || 'chart';
+  const toggle = `<div class="seg mini" role="group" aria-label="Tampilan ${esc(title)}">
+      <button data-dmode="${key}:chart" aria-pressed="${mode === 'chart'}" title="Chart" aria-label="Chart">${icon('chart')}</button>
+      <button data-dmode="${key}:list" aria-pressed="${mode === 'list'}" title="Daftar (bisa diurutkan)" aria-label="Daftar">${icon('listv')}</button></div>`;
+  const body = !rows.length ? '<p class="reason">Belum ada data.</p>' : mode === 'list' ? bucketTable(key, rows, total) : chart(key, rows, total);
+  return `<section class="card dcard"><h2>${esc(title)}<small>${esc(note)}</small><span class="grow"></span>${toggle}</h2>${body}</section>`;
+}
+
+function renderDash() {
+  const el = $('#dashboard');
+  const d = D.data;
+  const head = `<div class="page-head"><h1>Dashboard</h1><p>${d ? `Ringkasan indeks: ${nf.format(d.files)} file di ${S.roots.length} folder yang dipantau. Klik bar atau baris untuk melihat daftar filenya.` : 'Menghitung…'}</p></div>`;
+  if (!d) { el.innerHTML = head + '<div class="result"><span class="ring lg"></span><b>Menghitung ringkasan…</b></div>'; return; }
+  D.lists = { cat: d.by_cat, ext: d.by_ext, root: d.by_root, year: d.by_year };
+  const tile = (label, value, sub, act = '', actLabel = '') => `<div class="card kpi"><span class="k-label">${label}</span><span class="k-value">${value}</span>
+      <span class="k-sub">${sub}</span>${act ? `<button class="btn" data-dash="${act}">${actLabel} ›</button>` : ''}</div>`;
+  const kpis = tile('Total terindeks', human(d.size), `${nf.format(d.files)} file`) +
+    tile('Terbuang oleh duplikat', human(d.dup_wasted), `${nf.format(d.dup_files)} file punya salinan identik`, 'dup', 'Lihat duplikat') +
+    tile('Saran menunggu', nf.format(d.suggest), 'file baru belum dirapikan', 'suggest', 'Buka Saran') +
+    tile('Tidak diubah > 1 tahun', human(d.stale.size), `${nf.format(d.stale.files)} file — kandidat arsip`);
+
+  const big = d.largest.map((r, i) => `<div class="drow" data-big="${i}" title="${esc(r.path)}">${fileIcon(r.cat)}
+      <div class="grow"><span>${esc(r.name)}</span><small>${esc(pretty(parentOf(r.path)))}</small></div>
+      <span class="v">${human(r.size)}</span><button class="btn std" data-bigloc="${i}">Lihat</button></div>`).join('') || '<p class="reason">Belum ada data.</p>';
+  const dups = d.dup_groups.map((g, i) => `<div class="drow" title="${esc(g.paths.join('\n'))}">${fileIcon(rulesCat(g.paths[0]))}
+      <div class="grow"><span>${esc(baseName(g.paths[0] || ''))}</span><small>${g.count} salinan · ${human(g.size)} per file</small></div>
+      <span class="v">${human(g.wasted)} terbuang</span><button class="btn std" data-dup="${i}">Lihat</button></div>`).join('') || '<p class="reason">Tidak ada duplikat.</p>';
+  const tipRow = (ic, text, sub, act, label) => `<div class="drow tipsrow">${icon(ic)}<div class="grow"><span>${text}</span><small>${sub}</small></div>${act ? `<button class="btn std" data-dash="${act}">${label}</button>` : ''}</div>`;
+  const tips = [
+    d.dup_wasted ? tipRow('dup', `Hapus salinan duplikat: hemat ${human(d.dup_wasted)}`, `${nf.format(d.dup_files)} file punya salinan dengan isi sama persis`, 'dup', 'Lihat') : '',
+    d.old_downloads.files ? tipRow('Downloads', `${nf.format(d.old_downloads.files)} file di Downloads lebih dari 90 hari`, `${human(d.old_downloads.size)} — sering sudah tidak dibutuhkan`, 'oldDownloads', 'Buka') : '',
+    d.suggest ? tipRow('sparkle', `${nf.format(d.suggest)} file baru menunggu dirapikan`, 'Saran tujuan sudah disiapkan', 'suggest', 'Buka Saran') : '',
+    d.empty_files ? tipRow('warn', `${nf.format(d.empty_files)} file kosong (0 byte)`, 'Rapikan folder akan memindahkannya ke _Kosong', 'tidy', 'Rapikan') : '',
+    tipRow('trash', 'Recycle Bin', 'Lihat isinya, pulihkan, atau kosongkan untuk mengosongkan ruang', 'bin', 'Buka'),
+  ].join('');
+
+  el.innerHTML = head + `<div class="dash">
+    <div class="kpis">${kpis}</div>
+    <div class="dash-grid">
+      ${bucketCard('cat', 'Jenis file', 'menurut ukuran', d.by_cat, d.size, meterChart)}
+      ${bucketCard('root', 'Folder yang dipantau', 'menurut ukuran', d.by_root, d.size, meterChart)}
+      ${bucketCard('ext', 'Ekstensi', '30 terbesar', d.by_ext, d.size, meterChart)}
+      ${bucketCard('year', 'Umur file', 'ukuran per tahun terakhir diubah', d.by_year, d.size, (k, rows, total) => yearChart(rows, total))}
+      <section class="card dcard"><h2>File terbesar<small>${d.largest.length} teratas</small></h2><div class="dlist">${big}</div></section>
+      <section class="card dcard"><h2>Duplikat paling boros<small>ruang yang bisa dihemat</small></h2><div class="dlist">${dups}</div></section>
+      <section class="card dcard"><h2>Bisa dibersihkan</h2><div class="dlist">${tips}</div></section>
+    </div></div>`;
+}
+const rulesCat = (p) => catOfName(baseName(p || ''));
+
+/** A file somewhere in the index → open its folder in the app with the file selected. */
+function showInApp(path) {
+  go(parentOf(path));
+  S.sel = new Set([path]);
+  S.focusPath = path;
+}
+function openDrill(key, i) {
+  const b = D.lists[key]?.[i];
+  if (!b) return;
+  if (key === 'root') return go(b.path);
+  setView(`${key}:${b.label}`);
+  S.sorts.db = { sort: 'size', desc: true }; // a drill-down starts with the biggest files
+  load();
+}
+$('#dashboard').addEventListener('click', (e) => {
+  const m = e.target.closest('[data-dmode]');
+  if (m) { const [k, v] = m.dataset.dmode.split(':'); D.mode[k] = v; store.set('dashModes', D.mode); return renderDash(); }
+  const s = e.target.closest('[data-dsort]');
+  if (s) {
+    const [k, col] = s.dataset.dsort.split(':');
+    const cur = D.sort[k] || { k: 'size', desc: true };
+    D.sort[k] = cur.k === col ? { k: col, desc: !cur.desc } : { k: col, desc: col !== 'name' };
+    return renderDash();
+  }
+  const bl = e.target.closest('[data-bigloc]');
+  if (bl) return showInApp(D.data.largest[+bl.dataset.bigloc].path);
+  const dp = e.target.closest('[data-dup]');
+  if (dp) {
+    const g = D.data.dup_groups[+dp.dataset.dup];
+    setView('dup');
+    S.q = g.md5;
+    $('#q').value = g.md5;
+    return load();
+  }
+  const a = e.target.closest('[data-dash]');
+  if (a) {
+    const act = a.dataset.dash;
+    if (act === 'dup' || act === 'suggest' || act === 'bin') return setView(act);
+    if (act === 'tidy') return openTidy(S.roots.find((r) => r.kind === 'Downloads')?.path);
+    if (act === 'oldDownloads') { const dl = S.roots.find((r) => r.kind === 'Downloads'); if (dl) { S.sorts.browse = { sort: 'mtime', desc: false }; go(dl.path); } }
+    return;
+  }
+  const big = e.target.closest('[data-big]');
+  if (big) return showInApp(D.data.largest[+big.dataset.big].path);
+  const o = e.target.closest('[data-open]');
+  if (o) { const [k, i] = o.dataset.open.split(':'); openDrill(k, +i); }
+});
+$('#dashboard').addEventListener('keydown', (e) => {
+  const o = e.target.closest('[data-open]');
+  if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); const [k, i] = o.dataset.open.split(':'); openDrill(k, +i); }
+});
+// hover tooltip for every chart mark (and table rows that carry one)
+document.addEventListener('mousemove', (e) => {
+  const t = e.target.closest?.('[data-tip]');
+  const tip = $('#tip');
+  if (!t) { tip.hidden = true; return; }
+  tip.textContent = t.dataset.tip;
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  tip.style.left = `${Math.min(e.clientX + 14, innerWidth - r.width - 8)}px`;
+  tip.style.top = `${Math.min(e.clientY + 16, innerHeight - r.height - 8)}px`;
+});
+$('#subtitle').addEventListener('click', (e) => { if (e.target.closest('[data-back-dash]')) openDash(); });
 
 // ================================================================ properties
 async function showProps(path) {
@@ -918,7 +1347,7 @@ function closeTidy() {
 }
 async function loadKids(p) {
   if (T.kids.has(p)) return;
-  try { T.kids.set(p, sortByName((await invoke('browse', { path: p })).filter((e) => e.is_dir))); } catch { T.kids.set(p, []); }
+  try { T.kids.set(p, sortByName((await invoke('browse', { path: p, showHidden: S.showHidden })).filter((e) => e.is_dir))); } catch { T.kids.set(p, []); }
 }
 const sortByName = (l) => l.sort((a, b) => cmpText(a.name, b.name));
 
@@ -1272,25 +1701,81 @@ $('#head').addEventListener('dblclick', (e) => {
 
 // ================================================================ events
 $('#nav').addEventListener('click', (e) => {
+  const add = e.target.closest('[data-addroot]');
+  if (add) { const r = add.getBoundingClientRect(); return openAddMenu(r.left, r.bottom + 4); }
   const b = e.target.closest('.nav-item');
   if (!b) return;
   const v = b.dataset.view;
   if (v === 'settings') return openSettings();
+  if (v === 'dash') return openDash();
+  const root = S.roots.find((r) => r.path === v);
+  if (root && !root.online) return toast(`"${root.name}" tidak terhubung. Colokkan drive-nya; folder ini otomatis aktif lagi.`, { error: true });
   v.includes('\\') ? go(v) : setView(v);
 });
+function showMenuAt(html, x, y) {
+  const m = $('#menu');
+  m.innerHTML = html;
+  m.hidden = false;
+  S.menuOpen = true;
+  const r = m.getBoundingClientRect();
+  m.style.left = `${Math.max(4, Math.min(x, innerWidth - r.width - 8))}px`;
+  m.style.top = `${Math.max(4, Math.min(y, innerHeight - r.height - 8))}px`;
+  m.querySelector('button:not(:disabled)')?.focus();
+}
+const mi = (attrs, ic, label, disabled = false, key = '') =>
+  `<button role="menuitem" ${attrs}${disabled ? ' disabled' : ''}>${icon(ic)}${esc(label)}<span class="key">${key}</span></button>`;
+
 $('#nav').addEventListener('contextmenu', (e) => {
   const b = e.target.closest('.nav-item');
   if (!b || !b.dataset.view.includes('\\')) return;
   e.preventDefault();
   e.stopPropagation();
-  const m = $('#menu');
-  m.innerHTML = `<button role="menuitem" data-navopen="${esc(b.dataset.view)}">${icon('open')}Buka</button>
-    <button role="menuitem" data-navtidy="${esc(b.dataset.view)}">${icon('sparkle')}Rapikan folder ini…</button>`;
-  m.hidden = false;
-  S.menuOpen = true;
-  m.style.left = `${e.clientX}px`;
-  m.style.top = `${e.clientY}px`;
+  const p = b.dataset.view;
+  const i = S.roots.findIndex((r) => r.path === p);
+  const off = S.roots[i] && !S.roots[i].online;
+  showMenuAt(
+    mi(`data-navopen="${esc(p)}"`, 'open', 'Buka', off) + mi(`data-navtidy="${esc(p)}"`, 'sparkle', 'Rapikan folder ini…', off) +
+    '<hr>' + mi(`data-rootmove="${i}:-1"`, 'up', 'Naikkan', i <= 0) + mi(`data-rootmove="${i}:1"`, 'down', 'Turunkan', i >= S.roots.length - 1) +
+    '<hr>' + mi(`data-rootprops="${esc(p)}"`, 'info', 'Properti', off) +
+    mi(`data-rootdel="${esc(p)}"`, 'remove', 'Hapus dari daftar'), e.clientX, e.clientY);
 });
+
+// ---------------------------------------------------------------- watched folders (navigation pane)
+async function setRoots(paths, msg) {
+  try {
+    S.roots = await invoke('set_roots', { paths });
+    if (isBrowse() && !rootOf(S.cwd)) setView('suggest'); // the open folder is no longer watched
+    else { renderNav(); load(); }
+    if (msg) toast(msg);
+  } catch (e) { toast(String(e), { error: true }); }
+}
+
+/** Add a folder or drive; a parent replaces folders inside it (after confirmation); a child of a listed one is refused. */
+async function addRoot(path, name, kind) {
+  const inside = S.roots.find((r) => path === r.path || path.startsWith(withSep(r.path)));
+  if (inside) return toast(`"${name}" sudah tercakup oleh "${inside.name}" di daftar.`, { error: true });
+  const children = S.roots.filter((r) => r.path.startsWith(withSep(path)));
+  const notes = [];
+  if (children.length) notes.push(`Folder ini mencakup ${children.map((c) => `"${c.name}"`).join(', ')} — semuanya digabung ke dalamnya.`);
+  if (kind === 'Drive' || kind === 'Home' || /^[A-Z]:\\$/i.test(path)) {
+    notes.push('Seluruh isinya akan diindeks (nama + MD5 setiap file). Pertama kali bisa lama dan membuat komputer sibuk; folder sistem (Windows, Program Files, AppData, tersembunyi) dilewati.');
+  }
+  if (notes.length && !(await confirmDialog(`Tambahkan "${name}"?`, notes.join('\n\n'), 'Tambahkan'))) return;
+  const paths = S.roots.filter((r) => !children.includes(r)).map((r) => r.path).concat(path);
+  setRoots(paths, `"${name}" ditambahkan — sedang diindeks`);
+}
+
+async function openAddMenu(x, y) {
+  let places = [];
+  try { places = await invoke('places'); } catch (e) { return toast(String(e), { error: true }); }
+  const row = (p) => mi(`data-addpath="${esc(p.path)}" data-addname="${esc(p.name)}" data-addkind="${p.kind}"`, p.added ? 'check' : KIND_ICON[p.kind] || 'folder', p.name, p.added, p.added ? 'sudah ada' : '');
+  const folders = places.filter((p) => p.kind !== 'Drive');
+  const drives = places.filter((p) => p.kind === 'Drive');
+  showMenuAt(
+    '<div class="menu-head">Folder</div>' + folders.map(row).join('') +
+    (drives.length ? '<hr><div class="menu-head">Drive</div>' + drives.map(row).join('') : '') +
+    '<hr>' + mi('data-addpick', 'folderAdd', 'Pilih folder lain…') + mi('data-addreset', 'refresh', 'Kembalikan daftar bawaan'), x, y);
+}
 $('#addr').addEventListener('click', (e) => {
   const n = e.target.closest('[data-nav]');
   if (n) return nav(n.dataset.nav);
@@ -1353,12 +1838,36 @@ document.addEventListener('mouseup', (e) => {
   if (e.button === 3) { e.preventDefault(); nav('back'); } // mouse side buttons
   if (e.button === 4) { e.preventDefault(); nav('fwd'); }
 });
-$('#menu').addEventListener('click', (e) => {
+$('#menu').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   closeMenu();
   if (b.dataset.navopen) return go(b.dataset.navopen);
   if (b.dataset.navtidy) return openTidy(b.dataset.navtidy);
+  if (b.dataset.rootprops) return showProps(b.dataset.rootprops);
+  if (b.dataset.viewopt === 'preview') return setPreview(!S.previewOn);
+  if (b.dataset.viewopt === 'hidden') return setHidden(!S.showHidden);
+  if (b.dataset.rootdel) {
+    const r = S.roots.find((x) => x.path === b.dataset.rootdel);
+    return setRoots(S.roots.filter((x) => x !== r).map((x) => x.path), `"${r.name}" dihapus dari daftar — file-nya tidak disentuh`);
+  }
+  if (b.dataset.rootmove) {
+    const [i, d] = b.dataset.rootmove.split(':').map(Number);
+    const list = S.roots.map((x) => x.path);
+    [list[i], list[i + d]] = [list[i + d], list[i]];
+    return setRoots(list);
+  }
+  if (b.dataset.addpath) return addRoot(b.dataset.addpath, b.dataset.addname, b.dataset.addkind);
+  if (b.dataset.addpick !== undefined) {
+    const p = await invoke('pick_folder');
+    return p && addRoot(p, baseName(p.replace(/\\$/, '')) || p, /^[A-Z]:\\?$/i.test(p) ? 'Drive' : 'Folder');
+  }
+  if (b.dataset.addreset !== undefined) {
+    const places = await invoke('places');
+    const def = ['Desktop', 'Downloads', 'Documents', 'Pictures', 'Music', 'Videos'];
+    if (!(await confirmDialog('Kembalikan daftar bawaan?', 'Daftar folder kembali ke Desktop, Downloads, Documents, Pictures, Music dan Videos. File tidak disentuh.', 'Kembalikan'))) return;
+    return setRoots(places.filter((p) => def.includes(p.kind)).map((p) => p.path), 'Daftar folder dikembalikan');
+  }
   if (b.dataset.act === 'refresh') return load();
   if (b.dataset.act === 'propsCwd') return showProps(S.cwd);
   act(b.dataset.act);
@@ -1418,6 +1927,8 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && k === 'z') return undo();
   if (e.ctrlKey && k === 'a') { S.sel = new Set(S.vis.map((r) => r.path)); paintSel(false); return e.preventDefault(); }
   if (e.altKey && e.key === 'Enter') { act('props'); return e.preventDefault(); }
+  if (e.altKey && k === 'p') { setPreview(!S.previewOn); return e.preventDefault(); }
+  if (e.ctrlKey && k === 'h') { setHidden(!S.showHidden); return e.preventDefault(); }
   if (e.key === 'F2') { act('rename'); return e.preventDefault(); }
   if (e.key === 'Delete') return act('delete');
   if (e.key === 'Backspace') { nav(isBrowse() ? 'back' : ''); return e.preventDefault(); }
@@ -1456,15 +1967,34 @@ document.addEventListener('keydown', (e) => {
 // ================================================================ start
 (async () => {
   S.roots = await invoke('list_roots');
+  const pw = store.get('previewW', 0);
+  if (pw) $('#preview').style.width = `${pw}px`;
+  setPreview(store.get('preview', true));
   await load();
   $('#list').focus();
   listen('changed', () => { if (S.pane === 'explorer') reload(); });
   listen('folder-size', (e) => {
     const { path, size, files } = e.payload;
     S.sizes.set(path, { size, files, t: Date.now() });
-    const i = S.vis.findIndex((r) => r.path === path);
-    const td = i >= 0 && $(`#rows tr[data-i="${i}"] td.sz`);
-    if (td) { td.textContent = human(size); td.title = `${nf.format(files)} file`; }
+    if (!browsing()) return;
+    if (S.sorts.browse.sort === 'size') {
+      // order depends on folder sizes: re-sort once a burst of results has arrived
+      clearTimeout(S.sizeTimer);
+      S.sizeTimer = setTimeout(() => { build(); render(); }, 350);
+    } else {
+      const i = S.vis.findIndex((r) => r.path === path);
+      const td = i >= 0 && $(`#rows tr[data-i="${i}"] td.sz`);
+      if (td) { td.textContent = human(size); td.title = `${nf.format(files)} file`; }
+      paintSel(false); // refresh the total in the status bar
+    }
+  });
+  listen('roots-changed', async () => { S.roots = await invoke('list_roots'); renderNav(); });
+  // A drive was plugged in: offer it (unless it is already in the list — that one comes back on its own).
+  listen('drive-added', (e) => {
+    const d = e.payload;
+    const known = S.roots.find((r) => r.path === d.path);
+    if (known) return toast(`"${known.name}" terhubung lagi — sedang diperbarui.`);
+    toast(`Drive terdeteksi: ${d.name}`, { action: { label: 'Tambahkan ke daftar', fn: () => addRoot(d.path, d.name, 'Drive') }, ms: 15000 });
   });
   // Files dragged in from File Explorer / the desktop.
   const at = (p) => [p.x / devicePixelRatio, p.y / devicePixelRatio];

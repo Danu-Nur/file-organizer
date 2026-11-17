@@ -82,12 +82,19 @@ pub fn is_project(dir: &Path) -> bool {
         .iter().any(|m| dir.join(m).exists())
 }
 
-/// Hidden folders, dependency/build folders, project containers and code projects are not indexed.
+/// Windows and app folders that show up when a whole drive or the user folder is watched; never organised.
+const SYSTEM_DIRS: &[&str] = &[
+    "windows", "program files", "program files (x86)", "programdata", "system volume information", "appdata",
+    "$windows.~bt", "$windows.~ws", "$winreagent", "recovery", "perflogs", "msocache", "intel", "amd", "nvidia",
+];
+
+/// Hidden folders, dependency/build folders, project containers, code projects and system folders are not indexed.
 // ponytail: checked once per folder and cached by the caller; a project created later in an already-indexed folder is
 // noticed on the next app start.
 pub fn skip_dir(dir: &Path) -> bool {
     let n = dir.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
     n.starts_with('.') || ["node_modules", "target", "vendor", "__pycache__", "venv", "$recycle.bin", "projects", "proyek"].contains(&n.as_str())
+        || SYSTEM_DIRS.contains(&n.as_str())
         || is_project(dir)
 }
 

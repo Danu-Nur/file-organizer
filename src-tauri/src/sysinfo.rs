@@ -116,6 +116,34 @@ mod win {
         out
     }
 
+    /// Mounted drives that are ready: ("Label (D:)", "D:\").
+    pub fn drives() -> Vec<(String, String)> {
+        use windows_sys::Win32::Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives, GetVolumeInformationW};
+        let mask = unsafe { GetLogicalDrives() };
+        let mut out = Vec::new();
+        for i in 0..26u32 {
+            if mask & (1 << i) == 0 {
+                continue;
+            }
+            let letter = (b'A' + i as u8) as char;
+            let root = format!("{letter}:\\");
+            let w = wide(&root);
+            let mut label = vec![0u16; 261];
+            // Fails for an empty card reader / DVD drive: skip it, like a drive that is not there.
+            let ok = unsafe { GetVolumeInformationW(w.as_ptr(), label.as_mut_ptr(), 261, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), 0) };
+            if ok == 0 {
+                continue;
+            }
+            let end = label.iter().position(|&c| c == 0).unwrap_or(0);
+            let mut name = String::from_utf16_lossy(&label[..end]);
+            if name.is_empty() {
+                name = match unsafe { GetDriveTypeW(w.as_ptr()) } { 2 => "Drive USB", 4 => "Drive jaringan", 5 => "DVD", _ => "Disk lokal" }.into();
+            }
+            out.push((format!("{name} ({letter}:)"), root));
+        }
+        out
+    }
+
     pub fn disk_free(p: &std::path::Path) -> u64 {
         use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
         let mut free = 0u64;
@@ -123,6 +151,21 @@ mod win {
         unsafe { GetDiskFreeSpaceExW(w.as_ptr(), &mut free, std::ptr::null_mut(), std::ptr::null_mut()) };
         free
     }
+}
+
+pub fn drives() -> Vec<(String, String)> {
+    #[cfg(windows)]
+    return win::drives();
+    #[cfg(not(windows))]
+    Vec::new()
+}
+
+/// Bit per drive letter; cheap enough to poll for plugged/unplugged drives.
+pub fn drive_mask() -> u32 {
+    #[cfg(windows)]
+    return unsafe { windows_sys::Win32::Storage::FileSystem::GetLogicalDrives() };
+    #[cfg(not(windows))]
+    0
 }
 
 pub fn ram() -> (u64, u64) {
